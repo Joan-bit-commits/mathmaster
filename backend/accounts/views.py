@@ -51,16 +51,17 @@ def profile(request):
         return Response({'detail': 'Authentication credentials were not provided.'}, status=401)
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
-    class LoginView(TokenObtainPairView):
-        permission_classes = [AllowAny]
-        class ProfileView(APIView):
-            permission_classes = [IsAuthenticated]
-            def get(self, request):
-                user = request.user
-                serializer = UserSerializer(user)
-                return Response(serializer.data)
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)

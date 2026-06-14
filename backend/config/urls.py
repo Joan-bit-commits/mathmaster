@@ -21,7 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
 ]
-urlpatterns += [
+urlpatterns = [
     path('api/learning/', include('learning.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/accounts/', include('accounts.urls')),
