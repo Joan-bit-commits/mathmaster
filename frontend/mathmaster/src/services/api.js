@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-const api = axios.create({  
-    baseURL: 'https://127.0.0.1:8000', // Replace with your API base URL
+// Use the API root; specific endpoints will be called from the pages.
+const api = axios.create({
+    baseURL: 'http://127.0.0.1:8000',
 });
 
 export default api;

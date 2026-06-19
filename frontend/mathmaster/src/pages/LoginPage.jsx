@@ -1,49 +1,52 @@
-import {useState} from 'react';
-
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     try {
-      const response = await api.post('/login', { email, password });
-        console.log('Login successful:', response.data);
-        // Handle successful login (e.g., store token, redirect to dashboard)
-    } catch (error) {
-      console.error('Login failed:', error);
-      // Handle login failure (e.g., display error message)
-    }
-    };
+      const response = await api.post('/api/accounts/login/', {
+        username,
+        password,
+      });
 
-    const handleChange = (e) => {
-    setEmail(e.target.value);
+      localStorage.setItem('access_token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+      localStorage.setItem('username', username);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Login failed');
+      console.error('Login failed:', err.response?.status, err.response?.data);
     }
+  };
 
-    return (
+  return (
     <div>
-      <h1>Login Page</h1>
+      <h2>Login</h2>
       <form onSubmit={handleSubmit}>
-        <div>
-            <input
-                type="email"
-                placeholder="Email"
-                value={email}   
-                onChange={handleChange}
-            />
-        </div>
-        <div>
-            <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-            />
-        </div>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         <button type="submit">Login</button>
       </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );
 }
