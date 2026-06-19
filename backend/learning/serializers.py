@@ -23,10 +23,13 @@ class QuizSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = '__all__'
+        fields = ['id', 'quiz', 'question_text']
 
 
 class AttemptSerializer(serializers.ModelSerializer):
+    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
+
     class Meta:
         model = Attempt
-        fields = '__all__'
+        fields = ['id', 'student', 'quiz', 'quiz_title', 'score', 'attempted_at']
+        read_only_fields = ['student', 'quiz_title', 'attempted_at']

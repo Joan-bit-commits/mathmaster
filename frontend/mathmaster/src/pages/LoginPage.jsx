@@ -21,7 +21,7 @@ function LoginPage() {
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       localStorage.setItem('username', username);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed');
       console.error('Login failed:', err.response?.status, err.response?.data);
