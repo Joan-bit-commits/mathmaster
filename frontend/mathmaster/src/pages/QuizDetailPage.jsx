@@ -56,14 +56,27 @@ function QuizDetailPage() {
           <form onSubmit={handleSubmit}>
             {questions.map((question) => (
               <div key={question.id}>
-                <label>
-                  {question.question_text}
+                <p>{question.question_text}</p>
+                {question.choices && question.choices.length > 0 ? (
+                  question.choices.map((choice) => (
+                    <label key={choice} style={{ display: 'block' }}>
+                      <input
+                        type="radio"
+                        name={`question-${question.id}`}
+                        value={choice}
+                        checked={answers[question.id] === choice}
+                        onChange={() => handleChange(question.id, choice)}
+                      />
+                      {choice}
+                    </label>
+                  ))
+                ) : (
                   <input
                     type="text"
                     value={answers[question.id] || ''}
                     onChange={(e) => handleChange(question.id, e.target.value)}
                   />
-                </label>
+                )}
               </div>
             ))}
             <button type="submit">Submit Attempt</button>

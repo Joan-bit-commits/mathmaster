@@ -37,6 +37,7 @@ class Question(models.Model):
         on_delete=models.CASCADE
     )
     question_text = models.TextField()
+    choices = models.JSONField(default=list, blank=True)
     correct_answer = models.CharField(max_length=200)
 
     def __str__(self):
