@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 function RegistrationPage() {
@@ -8,7 +8,7 @@ function RegistrationPage() {
     username: '',
     email: '',
     password: '',
-    role: ''
+    role: 'student'
   });
   const [error, setError] = useState('');
 
@@ -26,7 +26,7 @@ function RegistrationPage() {
     try {
       const response = await api.post('/api/accounts/register/', formData);
       console.log('Registration successful:', response.data);
-      navigate('/login');
+      navigate('/register-success');
     } catch (error) {
       setError(error.response?.data || error.message);
       console.error('Registration failed:', error.response?.data || error.message);
@@ -116,13 +116,9 @@ function RegistrationPage() {
 
         <p className="mt-6 text-sm text-slate-600 text-center">
           Already have an account?{' '}
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            className="text-indigo-600 hover:underline"
-          >
+          <Link to="/login" className="text-indigo-600 hover:underline">
             Login
-          </button>
+          </Link>
         </p>
       </div>
     </div>

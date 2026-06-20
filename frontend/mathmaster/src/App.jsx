@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegistrationPage from "./pages/RegistrationPage";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/StudentDashboard";
 import LessonsPage from "./pages/LessonsPage";
 import LessonDetailPage from "./pages/LessonDetailPage";
 import QuizzesPage from "./pages/QuizzesPage";
