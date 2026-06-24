@@ -27,6 +27,16 @@ function LoginPage() {
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       localStorage.setItem('username', formData.username);
+      
+      // Fetch user profile to get role
+      try {
+        const profileResponse = await api.get('/api/accounts/profile/');
+        localStorage.setItem('role', profileResponse.data.role);
+        localStorage.setItem('userId', profileResponse.data.id);
+      } catch (err) {
+        console.log('Could not fetch profile, but login successful');
+      }
+      
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid username or password');

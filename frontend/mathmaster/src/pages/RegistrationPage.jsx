@@ -7,7 +7,8 @@ function RegistrationPage() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: '',
+    password1: '',
+    password2: '',
     role: 'student'
   });
   const [error, setError] = useState('');
@@ -24,11 +25,33 @@ function RegistrationPage() {
     setError('');
 
     try {
-      const response = await api.post('/api/accounts/register/', formData);
+      // Send data with 'password' field instead of 'password1'
+      const submitData = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password1,
+        password2: formData.password2,
+        role: formData.role
+      };
+
+      const response = await api.post('/api/accounts/register/', submitData);
       console.log('Registration successful:', response.data);
-      navigate('/register-success');
+      
+      // Store tokens for auto-login
+      if (response.data.access && response.data.refresh) {
+        localStorage.setItem('access_token', response.data.access);
+        localStorage.setItem('refresh_token', response.data.refresh);
+        localStorage.setItem('username', formData.username);
+        localStorage.setItem('role', formData.role);
+        
+        // Navigate to dashboard (will redirect to teacher-dashboard if role is teacher)
+        navigate('/dashboard');
+      } else {
+        // If no tokens, go to success page
+        navigate('/register-success');
+      }
     } catch (error) {
-      setError(error.response?.data || error.message);
+      setError(error.response?.data?.detail || error.response?.data || error.message);
       console.error('Registration failed:', error.response?.data || error.message);
     }
   };
@@ -78,8 +101,23 @@ function RegistrationPage() {
             <input
               id="password"
               type="password"
-              name="password"
-              value={formData.password}
+              name="password1"
+              value={formData.password1}
+              onChange={handleChange}
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="password2">
+              Confirm Password
+            </label>
+            <input
+              id="password2"
+              type="password"
+              name="password2"
+              value={formData.password2}
               onChange={handleChange}
               className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               required

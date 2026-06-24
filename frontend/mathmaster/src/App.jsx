@@ -1,24 +1,28 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import RegistrationPage from "./pages/RegistrationPage";
-import RegistrationSuccess from "./pages/RegistrationSuccess";
-import Dashboard from "./pages/StudentDashboard";
-import LessonsPage from "./pages/LessonsPage";
-import LessonDetailPage from "./pages/LessonDetailPage";
-import QuizzesPage from "./pages/QuizzesPage";
-import QuizDetailPage from "./pages/QuizDetailPage";
-import PerformancePage from "./pages/PerformancePage";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import RegistrationPage from './pages/RegistrationPage';
+import RegistrationSuccess from './pages/RegistrationSuccess';
+import StudentDashboard from './pages/StudentDashboard';
+import LessonsPage from './pages/LessonsPage';
+import LessonDetailPage from './pages/LessonDetailPage';
+import QuizzesPage from './pages/QuizzesPage';
+import QuizDetailPage from './pages/QuizDetailPage';
+import PerformancePage from './pages/PerformancePage';
+import TeacherDashboard from './pages/TeacherDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegistrationPage />} />
+      <Route path="/register-success" element={<RegistrationSuccess />} />
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <StudentDashboard />
           </ProtectedRoute>
         }
       />
@@ -62,9 +66,14 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegistrationPage />} />
-      <Route path="/register-success" element={<RegistrationSuccess />} />
+      <Route
+        path="/teacher-dashboard"
+        element={
+          <ProtectedRoute>
+            <TeacherDashboard />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

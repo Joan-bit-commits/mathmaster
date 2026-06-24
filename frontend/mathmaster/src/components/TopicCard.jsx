@@ -3,7 +3,7 @@ import { Card, CardHeader, CardBody, CardFooter } from 'shadcn-ui';
 
 function TopicCard({ topic }) {
   return (
-    <Card className="bg-white shadow-md">
+    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
       <CardHeader>
         <h2 className="text-lg font-semibold">{topic.name}</h2>
       </CardHeader>
@@ -15,7 +15,8 @@ function TopicCard({ topic }) {
           View Details
         </Link>
       </CardFooter>
-    </Card>
+      <button className="bg-blue-500 text-white py-2 px-4 rounded mt-4"> Start Learning</button>
+    </div>
   );
 }
 
