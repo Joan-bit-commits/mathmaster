@@ -40,6 +40,9 @@ const NavbarComponent = ({ isLoggedIn, handleLogout }) => {
         <div className="flex items-center gap-3 sm:gap-4">
           {authenticated ? (
             <>
+              <Button variant="secondary" onClick={() => navigate('/ai-tutor')}>
+                AI tutor
+              </Button>
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-slate-950">{username || 'Learner'}</p>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{role || 'student'}</p>

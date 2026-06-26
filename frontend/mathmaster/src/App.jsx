@@ -10,6 +10,7 @@ import QuizDetailPage from './pages/QuizDetailPage';
 import PerformancePage from './pages/PerformancePage';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TopicDetails from './pages/TopicDetails';
+import AITutorPage from './pages/AITutorPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -88,6 +89,14 @@ function App() {
         element={
           <ProtectedRoute>
             <TeacherDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-tutor"
+        element={
+          <ProtectedRoute>
+            <AITutorPage />
           </ProtectedRoute>
         }
       />

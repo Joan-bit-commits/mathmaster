@@ -26,6 +26,12 @@ function HomePage() {
             >
               Browse topics
             </Link>
+            <Link
+              to="/ai-tutor"
+              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+            >
+              Open AI tutor
+            </Link>
           </div>
         </section>
       </main>

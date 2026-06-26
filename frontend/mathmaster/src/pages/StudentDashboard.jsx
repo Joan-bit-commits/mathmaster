@@ -141,6 +141,11 @@ function StudentDashboard() {
                     <h3 className="text-lg font-semibold text-slate-950">View performance</h3>
                     <p className="mt-2 text-sm text-slate-600">Review your scores and attempts.</p>
                   </Link>
+
+                    <Link to="/ai-tutor" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all duration-200 hover:border-sky-200 hover:bg-sky-50">
+                      <h3 className="text-lg font-semibold text-slate-950">AI tutor</h3>
+                      <p className="mt-2 text-sm text-slate-600">Get step-by-step help on any topic.</p>
+                    </Link>
                 </div>
               </div>
             </div>

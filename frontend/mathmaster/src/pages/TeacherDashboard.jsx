@@ -320,6 +320,10 @@ function TeacherDashboard() {
                 <p className="font-semibold text-slate-950">View performance</p>
                 <p className="mt-1 text-sm text-slate-600">Check student attempt history.</p>
               </Link>
+              <Link to="/ai-tutor" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-sky-200 hover:bg-sky-50">
+                <p className="font-semibold text-slate-950">AI tutor</p>
+                <p className="mt-1 text-sm text-slate-600">Test the tutoring assistant directly.</p>
+              </Link>
               <Link to="/dashboard" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-sky-200 hover:bg-sky-50">
                 <p className="font-semibold text-slate-950">Student dashboard</p>
                 <p className="mt-1 text-sm text-slate-600">See the learner experience.</p>
