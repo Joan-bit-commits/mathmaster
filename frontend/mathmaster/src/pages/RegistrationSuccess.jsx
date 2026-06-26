@@ -1,34 +1,35 @@
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/Button';
 
 function RegistrationSuccess() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-lg border border-slate-200 p-8 text-center">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_34%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-10 text-slate-950">
+      <div className="mx-auto flex w-full max-w-md flex-col rounded-[2rem] border border-slate-200 bg-white/90 p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="mb-6">
-          <div className="text-5xl mb-4">✅</div>
-          <h1 className="text-4xl font-bold text-indigo-600 mb-2">MathMaster</h1>
-          <h2 className="text-2xl font-semibold text-slate-900 mb-4">Registration Successful!</h2>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl">✅</div>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">MathMaster</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight">Registration successful</h1>
         </div>
 
-        <p className="text-slate-600 mb-6">
+        <p className="mb-6 text-sm leading-6 text-slate-600">
           Your account has been created successfully. You can now log in and start learning.
         </p>
 
-        <button
+        <Button
           onClick={() => navigate('/login')}
-          className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-white font-semibold shadow-sm hover:bg-indigo-700 transition-colors mb-3"
+          className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-white hover:bg-slate-800"
         >
           Go to Login
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={() => navigate('/dashboard')}
-          className="w-full rounded-2xl bg-green-600 px-4 py-3 text-white font-semibold shadow-sm hover:bg-green-700 transition-colors"
+          className="mt-3 w-full rounded-2xl bg-sky-600 px-4 py-3 text-white hover:bg-sky-700"
         >
           Go to Dashboard
-        </button>
+        </Button>
       </div>
     </div>
   );

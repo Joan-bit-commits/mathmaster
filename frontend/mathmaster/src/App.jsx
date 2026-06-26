@@ -9,6 +9,7 @@ import QuizzesPage from './pages/QuizzesPage';
 import QuizDetailPage from './pages/QuizDetailPage';
 import PerformancePage from './pages/PerformancePage';
 import TeacherDashboard from './pages/TeacherDashboard';
+import TopicDetails from './pages/TopicDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -18,6 +19,22 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegistrationPage />} />
       <Route path="/register-success" element={<RegistrationSuccess />} />
+      <Route
+        path="/topics"
+        element={
+          <ProtectedRoute>
+            <TopicDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/topics/:topicId"
+        element={
+          <ProtectedRoute>
+            <TopicDetails />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

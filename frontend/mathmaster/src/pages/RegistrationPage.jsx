@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Button from '../components/Button';
 
 function RegistrationPage() {
   const navigate = useNavigate();
@@ -9,14 +10,14 @@ function RegistrationPage() {
     email: '',
     password1: '',
     password2: '',
-    role: 'student'
+    role: 'student',
   });
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -25,29 +26,24 @@ function RegistrationPage() {
     setError('');
 
     try {
-      // Send data with 'password' field instead of 'password1'
       const submitData = {
         username: formData.username,
         email: formData.email,
         password: formData.password1,
         password2: formData.password2,
-        role: formData.role
+        role: formData.role,
       };
 
       const response = await api.post('/api/accounts/register/', submitData);
       console.log('Registration successful:', response.data);
-      
-      // Store tokens for auto-login
+
       if (response.data.access && response.data.refresh) {
         localStorage.setItem('access_token', response.data.access);
         localStorage.setItem('refresh_token', response.data.refresh);
         localStorage.setItem('username', formData.username);
         localStorage.setItem('role', formData.role);
-        
-        // Navigate to dashboard (will redirect to teacher-dashboard if role is teacher)
         navigate('/dashboard');
       } else {
-        // If no tokens, go to success page
         navigate('/register-success');
       }
     } catch (error) {
@@ -57,104 +53,92 @@ function RegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-lg border border-slate-200 p-8">
-        <h1 className="text-4xl font-bold text-indigo-600 mb-4 text-center">MathMaster</h1>
-        <h2 className="text-3xl font-semibold text-slate-900 mb-6 text-center">Register</h2>
-        <p className="mb-6 text-sm text-slate-600 text-center">Create an account to access personalized learning paths and track your progress.</p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_34%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-10 text-slate-950">
+      <div className="mx-auto flex w-full max-w-md flex-col rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="mb-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">MathMaster</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight">Create your account</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Set up a profile for personalized lessons and progress tracking.</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="username">
-              Username
-            </label>
+            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="username">Username</label>
             <input
               id="username"
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="email">
-              Email
-            </label>
+            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="password">
-              Password
-            </label>
+            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
               name="password1"
               value={formData.password1}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="password2">
-              Confirm Password
-            </label>
+            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="password2">Confirm Password</label>
             <input
               id="password2"
               type="password"
               name="password2"
               value={formData.password2}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2" htmlFor="role">
-              Role
-            </label>
+            <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="role">Role</label>
             <select
               id="role"
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
               required
             >
-              <option value="">Select Role</option>
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
             </select>
           </div>
 
-          <button
-            type="submit"
-            className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-white font-semibold shadow-sm hover:bg-indigo-700 transition-colors"
-          >
+          <Button type="submit" className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-white hover:bg-slate-800">
             Create Account
-          </button>
+          </Button>
         </form>
 
-        {error && <p className="mt-4 text-sm text-red-600 text-center">{JSON.stringify(error)}</p>}
+        {error && <p className="mt-4 text-center text-sm text-rose-600">{JSON.stringify(error)}</p>}
 
-        <p className="mt-6 text-sm text-slate-600 text-center">
+        <p className="mt-6 text-center text-sm text-slate-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-600 hover:underline">
+          <Link to="/login" className="font-semibold text-sky-700 hover:underline">
             Login
           </Link>
         </p>
