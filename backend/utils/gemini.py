@@ -4,17 +4,19 @@ from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 def ask_gemini(prompt: str) -> str:
     response = model.generate_content(
         prompt,
         generation_config={
-            'temperature': 0.7,
-            'max_output_tokens': 512,
-        },
+    "temperature":0.3,
+    "top_p":0.9,
+    "top_k":40,
+    "max_output_tokens":2048,
+}
     )
 
     text = getattr(response, 'text', '') or ''

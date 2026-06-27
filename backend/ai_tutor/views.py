@@ -1,3 +1,5 @@
+import traceback
+
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -26,13 +28,10 @@ class AITutorAskView(APIView):
         try:
             answer = ask_gemini(prompt)
         except Exception as exc:
-            return Response(
-                {
-                    'detail': 'AI tutor is temporarily unavailable.',
-                    'error': str(exc),
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+            traceback.print_exc()
+            raise
+
+        answer = answer.strip()
 
         return Response(
             {
