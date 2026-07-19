@@ -1,4 +1,5 @@
 /* stylelint-disable at-rule-no-unknown */
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist";
 /* stylelint-disable-next-line at-rule-no-unknown */
 /* stylelint-disable-next-line at-rule-no-unknown */
@@ -11,7 +12,7 @@
 @layer base {
   .theme {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Inter Variable', 'Inter', 'Geist Variable', sans-serif;
   }
   :root {
     --background: oklch(1 0 0);
