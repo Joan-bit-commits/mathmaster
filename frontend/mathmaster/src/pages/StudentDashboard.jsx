@@ -543,7 +543,7 @@ function StudentDashboard() {
         <Card className="overflow-hidden bg-slate-950 text-white">
           <CardHeader className="border-slate-800">
             <div className="flex items-center justify-between gap-3">
-              <Badge tone="sky">Formula board</Badge>
+             <Badge tone="sky">Formula board</Badge>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
                 <Sigma className="h-4 w-4" /> Study math
               </div>
