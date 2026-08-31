@@ -73,8 +73,11 @@ def _get_answer(request, data):
 def run_ask(request, data):
     """Non-streaming ask. Returns (payload, status_code, cache_hit)."""
     if not gemini_configured():
-        return {'error': {'code': 'SERVICE_UNAVAILABLE',
-                          'message': 'AI tutor is not configured.'}}, 503, False
+        return (
+            {'error': {'code': 'SERVICE_UNAVAILABLE', 'message': 'AI tutor is not configured.'}},
+            503,
+            False,
+        )
 
     topic, level, session_id, source, cache_hit = _get_answer(request, data)
     question = sanitize_text(data['question'])
@@ -86,8 +89,16 @@ def run_ask(request, data):
             answer = ask_gemini(source[0], history=history)
         except Exception:
             logger.exception('Gemini request failed')
-            return {'error': {'code': 'SERVICE_UNAVAILABLE',
-                              'message': 'AI tutor is temporarily unavailable. Please try again later.'}}, 503, False
+            return (
+                {
+                    'error': {
+                        'code': 'SERVICE_UNAVAILABLE',
+                        'message': 'AI tutor is temporarily unavailable. Please try again later.',
+                    }
+                },
+                503,
+                False,
+            )
         cache.set(_cache_key(topic, question, level), answer, CACHE_TTL_SECONDS)
 
     session, _ = _history_for_session(session_id, request.user)
@@ -96,13 +107,17 @@ def run_ask(request, data):
     _persist_messages(session, question, answer)
     track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
 
-    return {
-        'session_id': session.id,
-        'topic': topic,
-        'level': level,
-        'answer': answer,
-        'cached': cache_hit,
-    }, 200, cache_hit
+    return (
+        {
+            'session_id': session.id,
+            'topic': topic,
+            'level': level,
+            'answer': answer,
+            'cached': cache_hit,
+        },
+        200,
+        cache_hit,
+    )
 
 
 def run_ask_stream(request, data):
@@ -150,4 +165,4 @@ def run_ask_stream(request, data):
 
 def _chunk(text: str, size: int = 24):
     for i in range(0, len(text), size):
-        yield text[i:i + size]
+        yield text[i : i + size]

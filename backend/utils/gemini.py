@@ -41,7 +41,7 @@ def ask_gemini(prompt: str, history: list[dict] | None = None) -> str:
         raise RuntimeError('Gemini API key is not configured.')
 
     contents = []
-    for message in (history or []):
+    for message in history or []:
         role = 'model' if message.get('role') == 'assistant' else 'user'
         contents.append({'role': role, 'parts': [message.get('content', '')]})
     contents.append({'role': 'user', 'parts': [prompt]})
@@ -70,7 +70,7 @@ def stream_gemini(prompt: str, history: list[dict] | None = None):
         raise RuntimeError('Gemini API key is not configured.')
 
     contents = []
-    for message in (history or []):
+    for message in history or []:
         role = 'model' if message.get('role') == 'assistant' else 'user'
         contents.append({'role': role, 'parts': [message.get('content', '')]})
     contents.append({'role': 'user', 'parts': [prompt]})

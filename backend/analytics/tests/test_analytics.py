@@ -3,9 +3,6 @@ import pytest
 from analytics.models import DailyStreak, LearningEvent, Recommendation
 from analytics.services import (
     generate_recommendations,
-    student_summary,
-    teacher_overview,
-    topic_performance,
 )
 from analytics.signals_utils import track_event
 from learning.models import Attempt, Lesson, Question, Quiz, Topic
@@ -25,8 +22,7 @@ def curriculum(db, django_user_model):
 @pytest.mark.django_db
 class TestEventTracking:
     def test_track_event_creates_event_and_streak(self, student, curriculum):
-        event = track_event(student, 'lesson_view', topic=curriculum['topic'],
-                            lesson=curriculum['lesson'])
+        event = track_event(student, 'lesson_view', topic=curriculum['topic'], lesson=curriculum['lesson'])
         assert LearningEvent.objects.filter(id=event.id, event_type='lesson_view').exists()
         streak = DailyStreak.objects.get(student=student)
         assert streak.lessons_completed == 0  # lesson_view doesn't bump counters
@@ -40,15 +36,19 @@ class TestEventTracking:
         assert DailyStreak.objects.get(student=student).quizzes_passed == 1
 
     def test_event_endpoint(self, student_client, curriculum):
-        resp = student_client.post('/api/analytics/events/', {
-            'event_type': 'lesson_view', 'lesson': curriculum['lesson'].id,
-        }, format='json')
+        resp = student_client.post(
+            '/api/analytics/events/',
+            {
+                'event_type': 'lesson_view',
+                'lesson': curriculum['lesson'].id,
+            },
+            format='json',
+        )
         assert resp.status_code == 201
         assert LearningEvent.objects.count() == 1
 
     def test_event_endpoint_rejects_bad_type(self, student_client):
-        resp = student_client.post('/api/analytics/events/', {
-            'event_type': 'not_a_type'}, format='json')
+        resp = student_client.post('/api/analytics/events/', {'event_type': 'not_a_type'}, format='json')
         assert resp.status_code == 400
 
 
@@ -120,9 +120,10 @@ class TestRecommendations:
 
     def test_attempt_create_triggers_recommendations(self, student_client, curriculum):
         resp = student_client.post(
-            f"/api/learning/quizzes/{curriculum['quiz'].id}/attempts/",
+            f'/api/learning/quizzes/{curriculum["quiz"].id}/attempts/',
             {'answers': [{'question': curriculum['q1'].id, 'answer': 'wrong'}]},
-            format='json')
+            format='json',
+        )
         assert resp.status_code == 201
         # Recommendation generation runs on_commit; in tests the connection
         # callbacks fire with captureOnCommitCallbacks via APIClient only in
@@ -134,6 +135,7 @@ class TestRecommendations:
         Attempt.objects.create(student=student, quiz=curriculum['quiz'], score=10)
         generate_recommendations(student)
         from analytics.services import get_active_recommendations
+
         assert list(get_active_recommendations(student)) == []
 
 

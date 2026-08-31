@@ -22,8 +22,7 @@ def generate_recommendations(student):
     max_items = settings.RECOMMENDATION_MAX_ITEMS
 
     per_topic = (
-        Attempt.objects
-        .filter(student=student)
+        Attempt.objects.filter(student=student)
         .values('quiz__lesson__topic')
         .annotate(avg_score=Avg('score'), attempts=Count('id'))
         .filter(attempts__gte=1, avg_score__lt=threshold)
@@ -36,15 +35,17 @@ def generate_recommendations(student):
         topic = Topic.objects.filter(id=row['quiz__lesson__topic']).first()
         if topic is None:
             continue
-        recs.append(Recommendation(
-            student=student,
-            topic=topic,
-            average_score=round(row['avg_score'], 1),
-            recommendation_text=(
-                f'Revise "{topic.name}" — your average score is '
-                f'{row["avg_score"]:.0f}%. Work through the lessons and retry the quiz.'
-            ),
-        ))
+        recs.append(
+            Recommendation(
+                student=student,
+                topic=topic,
+                average_score=round(row['avg_score'], 1),
+                recommendation_text=(
+                    f'Revise "{topic.name}" — your average score is '
+                    f'{row["avg_score"]:.0f}%. Work through the lessons and retry the quiz.'
+                ),
+            )
+        )
     Recommendation.objects.bulk_create(recs)
     return recs
 
@@ -53,8 +54,9 @@ def _streak_count(student) -> int:
     """Consecutive days ending today (or yesterday) with any recorded activity."""
     today = timezone.localdate()
     dates = set(
-        DailyStreak.objects.filter(student=student, date__gt=today - timedelta(days=400))
-        .values_list('date', flat=True)
+        DailyStreak.objects.filter(student=student, date__gt=today - timedelta(days=400)).values_list(
+            'date', flat=True
+        )
     )
     if not dates:
         return 0
@@ -70,11 +72,7 @@ def get_active_recommendations(student):
     """Persisted recommendations not older than the TTL."""
     ttl_days = settings.RECOMMENDATION_TTL_DAYS
     cutoff = timezone.now() - timedelta(days=ttl_days)
-    return (
-        Recommendation.objects
-        .filter(student=student, created_at__gte=cutoff)
-        .select_related('topic')
-    )
+    return Recommendation.objects.filter(student=student, created_at__gte=cutoff).select_related('topic')
 
 
 def student_summary(student, period='all'):
@@ -97,9 +95,7 @@ def student_summary(student, period='all'):
         attempts = attempts.filter(attempted_at__gte=since)
     avg_score = attempts.aggregate(a=Avg('score'))['a']
 
-    topics_covered = (
-        events.exclude(topic=None).values('topic').distinct().count()
-    )
+    topics_covered = events.exclude(topic=None).values('topic').distinct().count()
     time_spent_minutes = 0  # duration tracking is client-supplied; kept optional
 
     return {
@@ -118,8 +114,7 @@ def student_summary(student, period='all'):
 def topic_performance(student):
     """Per-topic average score for one student."""
     rows = (
-        Attempt.objects
-        .filter(student=student)
+        Attempt.objects.filter(student=student)
         .values(
             'quiz__lesson__topic__id',
             'quiz__lesson__topic__name',
@@ -158,15 +153,19 @@ def teacher_overview():
     active_30d = students.filter(learning_events__created_at__gte=now - timedelta(days=30)).distinct().count()
 
     struggling = (
-        Attempt.objects
-        .values('quiz__lesson__topic__id', 'quiz__lesson__topic__name')
+        Attempt.objects.values('quiz__lesson__topic__id', 'quiz__lesson__topic__name')
         .annotate(avg_score=Avg('score'), attempts=Count('id'))
         .filter(attempts__gte=1)
         .order_by('avg_score')[:5]
     )
 
     distribution_buckets = {
-        '0-49': 0, '50-59': 0, '60-69': 0, '70-79': 0, '80-89': 0, '90-100': 0,
+        '0-49': 0,
+        '50-59': 0,
+        '60-69': 0,
+        '70-79': 0,
+        '80-89': 0,
+        '90-100': 0,
     }
     for score in Attempt.objects.values_list('score', flat=True):
         if score < 50:

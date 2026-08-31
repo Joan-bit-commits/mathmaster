@@ -14,11 +14,7 @@ class IsAdmin(BasePermission):
 
     def has_permission(self, request, view) -> bool:
         user = request.user
-        return bool(
-            user
-            and user.is_authenticated
-            and (user.role == 'admin' or user.is_superuser)
-        )
+        return bool(user and user.is_authenticated and (user.role == 'admin' or user.is_superuser))
 
 
 class IsStudent(BasePermission):
@@ -37,9 +33,7 @@ class IsStaffMember(BasePermission):
     def has_permission(self, request, view) -> bool:
         user = request.user
         return bool(
-            user
-            and user.is_authenticated
-            and (user.role in ('teacher', 'admin') or user.is_superuser)
+            user and user.is_authenticated and (user.role in ('teacher', 'admin') or user.is_superuser)
         )
 
 
@@ -48,6 +42,7 @@ class IsTeacherOrAdmin(BasePermission):
 
     Object-level: teachers may only mutate objects they created
     (admins may mutate anything)."""
+
     message = 'You do not have permission to modify this content.'
 
     def has_permission(self, request, view) -> bool:

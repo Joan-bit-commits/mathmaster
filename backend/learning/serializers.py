@@ -9,8 +9,15 @@ class TopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Topic
         fields = [
-            'id', 'name', 'description', 'level', 'subject',
-            'lesson_count', 'created_by', 'created_at', 'updated_at',
+            'id',
+            'name',
+            'description',
+            'level',
+            'subject',
+            'lesson_count',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -21,8 +28,13 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = [
-            'id', 'topic', 'title', 'content',
-            'created_by', 'created_at', 'updated_at',
+            'id',
+            'topic',
+            'title',
+            'content',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -33,8 +45,13 @@ class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = [
-            'id', 'lesson', 'title', 'description',
-            'created_by', 'created_at', 'updated_at',
+            'id',
+            'lesson',
+            'title',
+            'description',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 
@@ -45,8 +62,14 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = [
-            'id', 'quiz', 'question_text', 'choices', 'correct_answer',
-            'created_by', 'created_at', 'updated_at',
+            'id',
+            'quiz',
+            'question_text',
+            'choices',
+            'correct_answer',
+            'created_by',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 

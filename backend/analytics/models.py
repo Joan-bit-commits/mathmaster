@@ -1,4 +1,4 @@
-﻿from django.conf import settings
+from django.conf import settings
 from django.db import models
 
 from learning.models import Lesson, Question, Quiz, Topic
@@ -57,6 +57,7 @@ class DailyStreak(models.Model):
 
     def __str__(self):
         return f'{self.student.username} {self.date}: {self.lessons_completed}L/{self.quizzes_passed}Q'
+
 
 class Performance(models.Model):
     student = models.ForeignKey(

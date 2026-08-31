@@ -1,4 +1,3 @@
-from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -57,6 +56,7 @@ class TopicDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class LessonListCreateByTopicView(generics.ListCreateAPIView):
     """GET /topics/{topic_id}/lessons/ (authenticated) and POST (teacher/admin)."""
+
     serializer_class = LessonSerializer
 
     def get_permissions(self):
@@ -132,6 +132,7 @@ class QuestionListCreateByQuizView(generics.ListCreateAPIView):
 
 class QuestionBulkCreateView(APIView):
     """POST /api/learning/quizzes/{quiz_id}/questions/bulk/ (max 100)."""
+
     permission_classes = [IsTeacherOrAdmin]
 
     def post(self, request, quiz_id):
@@ -139,10 +140,7 @@ class QuestionBulkCreateView(APIView):
         serializer = BulkQuestionListSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         questions = serializer.validated_data['questions']
-        created = [
-            Question(quiz=quiz, created_by=request.user, **q)
-            for q in questions
-        ]
+        created = [Question(quiz=quiz, created_by=request.user, **q) for q in questions]
         with transaction.atomic():
             Question.objects.bulk_create(created)
         return Response(
@@ -153,6 +151,7 @@ class QuestionBulkCreateView(APIView):
 
 class AttemptCreateView(APIView):
     """Students submit quiz answers; scoring + recommendation generation."""
+
     permission_classes = [IsStudent]
     throttle_scope = 'quiz_attempt'
 
@@ -195,6 +194,7 @@ class AttemptCreateView(APIView):
 
 class PerformanceView(APIView):
     """Student-only: their own attempt history."""
+
     permission_classes = [IsStudent]
 
     def get(self, request):

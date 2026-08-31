@@ -7,7 +7,13 @@ class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = LearningEvent
         fields = [
-            'id', 'event_type', 'topic', 'lesson', 'quiz', 'question', 'metadata',
+            'id',
+            'event_type',
+            'topic',
+            'lesson',
+            'quiz',
+            'question',
+            'metadata',
         ]
         read_only_fields = ['id']
 

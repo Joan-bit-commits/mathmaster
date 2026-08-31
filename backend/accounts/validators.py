@@ -16,13 +16,9 @@ class ComplexityValidator:
             or sum(c.isdigit() for c in password) < self.min_digit
         ):
             raise ValidationError(
-                'Password must contain at least one uppercase letter, '
-                'one lowercase letter and one digit.',
+                'Password must contain at least one uppercase letter, one lowercase letter and one digit.',
                 code='password_no_complexity',
             )
 
     def get_help_text(self) -> str:
-        return (
-            'Your password must contain at least one uppercase letter, '
-            'one lowercase letter and one digit.'
-        )
+        return 'Your password must contain at least one uppercase letter, one lowercase letter and one digit.'

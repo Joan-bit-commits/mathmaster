@@ -1,12 +1,14 @@
-from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
 
 from .models import User
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'role', 'first_name', 'last_name']
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -18,7 +20,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True},
             'first_name': {'required': False},
-            'last_name': {'required': False}
+            'last_name': {'required': False},
         }
 
     def validate(self, data):
@@ -28,7 +30,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if data.get('role') == 'admin':
             raise serializers.ValidationError({'role': 'Admin accounts cannot be self-registered.'})
         return data
-    
+
     def create(self, validated_data):
         validated_data.pop('password2')
         password = validated_data.pop('password')

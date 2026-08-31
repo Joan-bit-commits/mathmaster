@@ -5,14 +5,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import run_ask, run_ask_stream
 from .serializers import AITutorRequestSerializer
+from .services import run_ask, run_ask_stream
 
 logger = logging.getLogger(__name__)
 
 
 class AITutorAskView(APIView):
     """Non-streaming AI tutor endpoint (web fallback)."""
+
     permission_classes = [IsAuthenticated]
     throttle_scope = 'ai_tutor'
 
@@ -26,6 +27,7 @@ class AITutorAskView(APIView):
 
 class AITutorStreamView(APIView):
     """SSE streaming AI tutor endpoint."""
+
     permission_classes = [IsAuthenticated]
     throttle_scope = 'ai_tutor'
 

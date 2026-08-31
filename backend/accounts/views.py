@@ -1,6 +1,6 @@
 from django.db import transaction
-from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -36,12 +36,15 @@ class RegisterView(generics.CreateAPIView):
             transaction.on_commit(lambda: track_event(user, 'register'))
 
         refresh = RefreshToken.for_user(user)
-        return Response({
-            'user': UserSerializer(user).data,
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'detail': 'User registered successfully',
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'user': UserSerializer(user).data,
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'detail': 'User registered successfully',
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='post')

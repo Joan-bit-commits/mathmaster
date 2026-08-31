@@ -1,6 +1,5 @@
-from django.core.management import call_command
-
 import pytest
+from django.core.management import call_command
 
 from learning.models import Lesson, Question, Quiz, Topic
 
@@ -23,11 +22,19 @@ class TestSeedLearning:
         assert Question.objects.count() >= 200
 
     def test_seed_is_idempotent(self, seeded):
-        before = (Topic.objects.count(), Lesson.objects.count(),
-                  Quiz.objects.count(), Question.objects.count())
+        before = (
+            Topic.objects.count(),
+            Lesson.objects.count(),
+            Quiz.objects.count(),
+            Question.objects.count(),
+        )
         call_command('seed_learning', verbosity=0)
-        after = (Topic.objects.count(), Lesson.objects.count(),
-                 Quiz.objects.count(), Question.objects.count())
+        after = (
+            Topic.objects.count(),
+            Lesson.objects.count(),
+            Quiz.objects.count(),
+            Question.objects.count(),
+        )
         assert before == after
 
     def test_seed_reset_wipes(self, seeded):

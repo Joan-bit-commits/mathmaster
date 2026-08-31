@@ -9,12 +9,10 @@ from django.db import transaction
 
 from learning.models import Lesson, Question, Quiz, Topic
 from utils.curriculum import (
-    LEVEL_TOPICS,
     LESSONS,
-    PLACEHOLDER_LEVELS,
+    LEVEL_TOPICS,
     QUESTIONS,
     TOPICS,
-    UGANDA_LEVELS,
 )
 
 
@@ -41,8 +39,10 @@ class Command(BaseCommand):
             Quiz.objects.all().delete()
             Lesson.objects.all().delete()
             Topic.objects.all().delete()
-            self.stdout.write(f'Reset: deleted {deleted[0]} questions, {deleted[1]} quizzes, '
-                              f'{deleted[2]} lessons, {deleted[3]} topics.')
+            self.stdout.write(
+                f'Reset: deleted {deleted[0]} questions, {deleted[1]} quizzes, '
+                f'{deleted[2]} lessons, {deleted[3]} topics.'
+            )
 
         stats = {'topics': 0, 'lessons': 0, 'quizzes': 0, 'questions': 0}
 
@@ -86,7 +86,9 @@ class Command(BaseCommand):
                         if q_created:
                             stats['questions'] += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            'Seeded: {topics} new topics, {lessons} new lessons, '
-            '{quizzes} new quizzes, {questions} new questions.'.format(**stats)
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                'Seeded: {topics} new topics, {lessons} new lessons, '
+                '{quizzes} new quizzes, {questions} new questions.'.format(**stats)
+            )
+        )

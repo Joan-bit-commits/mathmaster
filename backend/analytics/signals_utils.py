@@ -10,8 +10,9 @@ from .models import DailyStreak, LearningEvent
 logger = logging.getLogger(__name__)
 
 
-def track_event(student, event_type, topic=None, lesson=None, quiz=None,
-                question=None, metadata=None, commit_streak=True):
+def track_event(
+    student, event_type, topic=None, lesson=None, quiz=None, question=None, metadata=None, commit_streak=True
+):
     """Record a LearningEvent and bump the student's DailyStreak row.
 
     Pass commit_streak=False for event types that shouldn't count as activity
