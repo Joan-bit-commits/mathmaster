@@ -1,41 +1,69 @@
-
 from rest_framework import serializers
-from datetime import datetime
+
+from .models import DailyStreak, LearningEvent, Performance, Recommendation
 
 
-class EventSerializer(serializers.Serializer):
-	"""Generic analytics event serializer."""
-	id = serializers.CharField(required=False, allow_blank=True)
-	name = serializers.CharField(max_length=200)
-	value = serializers.FloatField(required=False, allow_null=True)
-	meta = serializers.DictField(child=serializers.CharField(), required=False)
-	timestamp = serializers.DateTimeField(default_timezone=None, required=False)
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LearningEvent
+        fields = [
+            'id', 'event_type', 'topic', 'lesson', 'quiz', 'question', 'metadata',
+        ]
+        read_only_fields = ['id']
 
-	def validate_timestamp(self, value):
-		# If timestamp not provided, set to now
-		if value is None:
-			return datetime.utcnow()
-		return value
-
-
-class AggregationRequestSerializer(serializers.Serializer):
-	"""Serializer for aggregation requests (e.g., counts, sums over a period)."""
-	metric = serializers.ChoiceField(choices=[('count', 'count'), ('sum', 'sum'), ('avg', 'avg')])
-	event_name = serializers.CharField(max_length=200, required=False)
-	start = serializers.DateTimeField(required=False)
-	end = serializers.DateTimeField(required=False)
-
-	def validate(self, attrs):
-		start = attrs.get('start')
-		end = attrs.get('end')
-		if start and end and start > end:
-			raise serializers.ValidationError('start must be before end')
-		return attrs
+    def validate_event_type(self, value):
+        valid = [choice[0] for choice in LearningEvent.EVENT_TYPES]
+        if value not in valid:
+            raise serializers.ValidationError(f'event_type must be one of: {", ".join(valid)}')
+        return value
 
 
-class AggregationResultSerializer(serializers.Serializer):
-	metric = serializers.CharField()
-	event_name = serializers.CharField(required=False)
-	value = serializers.FloatField()
-	start = serializers.DateTimeField(required=False)
-	end = serializers.DateTimeField(required=False)
+class SummarySerializer(serializers.Serializer):
+    period = serializers.CharField()
+    total_lessons_viewed = serializers.IntegerField()
+    lessons_completed = serializers.IntegerField()
+    quizzes_taken = serializers.IntegerField()
+    ai_questions_asked = serializers.IntegerField()
+    average_score = serializers.FloatField(allow_null=True)
+    topics_covered = serializers.IntegerField()
+    current_streak_days = serializers.IntegerField()
+    time_spent_minutes = serializers.IntegerField()
+
+
+class TopicPerformanceSerializer(serializers.Serializer):
+    topic_id = serializers.IntegerField()
+    topic_name = serializers.CharField()
+    level = serializers.CharField()
+    average_score = serializers.FloatField()
+    best_score = serializers.FloatField()
+    attempts = serializers.IntegerField()
+
+
+class RecommendationSerializer(serializers.ModelSerializer):
+    topic_name = serializers.CharField(source='topic.name', read_only=True)
+
+    class Meta:
+        model = Recommendation
+        fields = ['id', 'topic', 'topic_name', 'recommendation_text', 'average_score', 'created_at']
+
+
+class TeacherOverviewSerializer(serializers.Serializer):
+    total_students = serializers.IntegerField()
+    active_7d = serializers.IntegerField()
+    active_30d = serializers.IntegerField()
+    top_struggling_topics = serializers.ListField()
+    score_distribution = serializers.DictField()
+
+
+class DailyStreakSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyStreak
+        fields = ['date', 'lessons_completed', 'quizzes_passed']
+
+
+class PerformanceSerializer(serializers.ModelSerializer):
+    topic_name = serializers.CharField(source='topic.name', read_only=True)
+
+    class Meta:
+        model = Performance
+        fields = ['id', 'topic', 'topic_name', 'average_score', 'attempted_at']
