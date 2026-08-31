@@ -218,6 +218,25 @@ RECOMMENDATION_MAX_ITEMS = config('RECOMMENDATION_MAX_ITEMS', default=5, cast=in
 
 SENTRY_DSN = config('SENTRY_DSN', default='')
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'MathMaster API',
+    'DESCRIPTION': 'AI-powered math learning platform (Ugandan curriculum).',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+}
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=config('SENTRY_TRACES_RATE', default=0.1, cast=float),
+        send_default_pii=False,
+    )
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------

@@ -1,5 +1,8 @@
+from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,6 +27,7 @@ def _set_created_by(serializer, request):
     serializer.save(created_by=request.user)
 
 
+@method_decorator(cache_page(60 * 5, key_prefix='topics:list'), name='get')
 class TopicListCreateView(generics.ListCreateAPIView):
     serializer_class = TopicSerializer
     permission_classes = [IsTeacherOrAdmin]
