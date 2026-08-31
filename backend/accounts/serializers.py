@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+
 from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
@@ -7,9 +9,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'role', 'first_name', 'last_name']
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True)
-    
+
     class Meta:
         model = User
         fields = ['username', 'email', 'role', 'password', 'password2', 'first_name', 'last_name']
@@ -18,10 +20,13 @@ class RegisterSerializer(serializers.ModelSerializer):
             'first_name': {'required': False},
             'last_name': {'required': False}
         }
-    
+
     def validate(self, data):
         if data['password'] != data['password2']:
-            raise serializers.ValidationError({"password": "Passwords do not match."})
+            raise serializers.ValidationError({'password': 'Passwords do not match.'})
+        # Default role: registration is public; nobody should self-assign admin.
+        if data.get('role') == 'admin':
+            raise serializers.ValidationError({'role': 'Admin accounts cannot be self-registered.'})
         return data
     
     def create(self, validated_data):

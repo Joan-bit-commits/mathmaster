@@ -23,6 +23,8 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+if DEBUG:
+    ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['testserver']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -2,7 +2,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsTeacherOrAdmin
+from accounts.permissions import IsStaffMember
 
 from .serializers import (
     EventSerializer,
@@ -71,7 +71,7 @@ class RecommendationListView(APIView):
 
 class TeacherOverviewView(APIView):
     """GET /api/analytics/teacher/overview/ — cohort stats (teacher/admin)."""
-    permission_classes = [IsTeacherOrAdmin]
+    permission_classes = [IsStaffMember]
 
     def get(self, request):
         return Response(TeacherOverviewSerializer(teacher_overview()).data)

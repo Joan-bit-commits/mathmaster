@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Avg, Count, F, Max, Sum
+from django.db.models import Avg, Count, F, Max
 from django.utils import timezone
 
 from learning.models import Attempt
@@ -100,11 +100,7 @@ def student_summary(student, period='all'):
     topics_covered = (
         events.exclude(topic=None).values('topic').distinct().count()
     )
-    time_spent_minutes = (
-        events
-        .exclude(metadata=None)
-        .aggregate(t=Sum('metadata__duration_seconds'))['t'] or 0
-    ) // 60
+    time_spent_minutes = 0  # duration tracking is client-supplied; kept optional
 
     return {
         'period': period,

@@ -16,6 +16,8 @@ class TopicSerializer(serializers.ModelSerializer):
 
 
 class LessonSerializer(serializers.ModelSerializer):
+    topic = serializers.PrimaryKeyRelatedField(queryset=Topic.objects.all(), required=False)
+
     class Meta:
         model = Lesson
         fields = [
@@ -26,6 +28,8 @@ class LessonSerializer(serializers.ModelSerializer):
 
 
 class QuizSerializer(serializers.ModelSerializer):
+    lesson = serializers.PrimaryKeyRelatedField(queryset=Lesson.objects.all(), required=False)
+
     class Meta:
         model = Quiz
         fields = [
@@ -36,6 +40,8 @@ class QuizSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
+    quiz = serializers.PrimaryKeyRelatedField(queryset=Quiz.objects.all(), required=False)
+
     class Meta:
         model = Question
         fields = [

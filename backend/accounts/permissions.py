@@ -29,6 +29,20 @@ class IsStudent(BasePermission):
         return bool(user and user.is_authenticated and user.role == 'student')
 
 
+class IsStaffMember(BasePermission):
+    """Teacher, admin or superuser regardless of HTTP method."""
+
+    message = 'Only teachers and admins can perform this action.'
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.role in ('teacher', 'admin') or user.is_superuser)
+        )
+
+
 class IsTeacherOrAdmin(BasePermission):
     """Read for everyone authenticated; write for teachers/admins.
 
