@@ -2,6 +2,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -155,6 +156,12 @@ class AttemptCreateView(APIView):
     permission_classes = [IsStudent]
     throttle_scope = 'quiz_attempt'
 
+    @extend_schema(
+        request={'application/json': {'type': 'object', 'properties': {'answers': {'type': 'array'}}}},
+        responses={201: AttemptSerializer, 400: None, 403: None},
+        tags=['learning'],
+        summary='Submit quiz answers and get a score',
+    )
     def post(self, request, quiz_id):
         quiz = get_object_or_404(Quiz, id=quiz_id)
         answers = request.data.get('answers')

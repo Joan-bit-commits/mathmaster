@@ -1,6 +1,7 @@
 import logging
 
 from django.http import StreamingHttpResponse
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,6 +18,12 @@ class AITutorAskView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = 'ai_tutor'
 
+    @extend_schema(
+        request=AITutorRequestSerializer,
+        responses={200: {'type': 'object', 'properties': {'answer': {'type': 'string'}}}, 503: None},
+        tags=['ai-tutor'],
+        summary='Ask the AI tutor (non-streaming)',
+    )
     def post(self, request):
         serializer = AITutorRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -31,6 +38,12 @@ class AITutorStreamView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = 'ai_tutor'
 
+    @extend_schema(
+        request=AITutorRequestSerializer,
+        responses={200: {'type': 'string', 'format': 'binary'}, 503: None},
+        tags=['ai-tutor'],
+        summary='Ask the AI tutor (SSE streaming)',
+    )
     def post(self, request):
         serializer = AITutorRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
