@@ -1,0 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient } from '@tanstack/react-query';
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 min
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: { retry: 0 },
+  },
+});
+
+export { AsyncStorage };
