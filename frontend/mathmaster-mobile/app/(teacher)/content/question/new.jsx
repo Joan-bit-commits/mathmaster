@@ -2,12 +2,12 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import AppBar from '../../../../../../src/components/ui/AppBar';
-import Button from '../../../../../../src/components/ui/Button';
-import Chip from '../../../../../../src/components/ui/Chip';
-import Input from '../../../../../../src/components/ui/Input';
-import MaterialIcon from '../../../../../../src/components/ui/MaterialIcon';
-import { createQuestion } from '../../../../../../src/services/teacher';
+import AppBar from '../../../../src/components/ui/AppBar';
+import Button from '../../../../src/components/ui/Button';
+import Chip from '../../../../src/components/ui/Chip';
+import Input from '../../../../src/components/ui/Input';
+import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
+import { createQuestion } from '../../../../src/services/teacher';
 
 const TYPES = [
   { key: 'mc', label: 'Multiple choice' },

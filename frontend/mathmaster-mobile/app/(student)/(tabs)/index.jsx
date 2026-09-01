@@ -4,15 +4,15 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Avatar from '../../../../src/components/ui/Avatar';
-import Card from '../../../../src/components/ui/Card';
-import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
-import ProgressBar from '../../../../src/components/ui/ProgressBar';
-import Screen from '../../../../src/components/ui/Screen';
-import Section from '../../../../src/components/ui/Section';
-import { greeting } from '../../../../src/lib/format';
-import { useTopics } from '../../../../src/hooks';
-import { useAuthStore } from '../../../../src/stores/authStore';
+import Avatar from '../../../src/components/ui/Avatar';
+import Card from '../../../src/components/ui/Card';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import ProgressBar from '../../../src/components/ui/ProgressBar';
+import Screen from '../../../src/components/ui/Screen';
+import Section from '../../../src/components/ui/Section';
+import { greeting } from '../../../src/lib/format';
+import { useTopics } from '../../../src/hooks';
+import { useAuthStore } from '../../../src/stores/authStore';
 
 const QUICK_ACTIONS = [
   { icon: 'smart_toy', label: 'Ask AI Tutor', color: '#e0f2fe', iconColor: '#0284c7', route: '/(student)/(tabs)/ai-tutor' },

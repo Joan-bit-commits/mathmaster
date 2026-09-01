@@ -2,8 +2,8 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
-import MaterialIcon from '../../../src/components/ui/MaterialIcon';
-import { useAuthStore } from '../../../src/stores/authStore';
+import MaterialIcon from '../../src/components/ui/MaterialIcon';
+import { useAuthStore } from '../../src/stores/authStore';
 
 const ICONS = {
   index: 'home',

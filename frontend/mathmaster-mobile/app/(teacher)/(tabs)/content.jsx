@@ -2,9 +2,9 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import Card from '../../../../src/components/ui/Card';
-import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
-import Screen from '../../../../src/components/ui/Screen';
+import Card from '../../../src/components/ui/Card';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import Screen from '../../../src/components/ui/Screen';
 
 const ACTIONS = [
   { icon: 'menu_book', label: 'Topics', blurb: 'Browse & edit topics', route: '/(teacher)/(tabs)/curriculum' },

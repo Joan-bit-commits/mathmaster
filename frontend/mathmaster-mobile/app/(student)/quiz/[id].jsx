@@ -3,15 +3,15 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Button from '../../../../src/components/ui/Button';
-import Card from '../../../../src/components/ui/Card';
-import Chip from '../../../../src/components/ui/Chip';
-import ErrorState from '../../../../src/components/ui/ErrorState';
-import LoadingSkeleton from '../../../../src/components/ui/LoadingSkeleton';
-import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
-import ProgressBar from '../../../../src/components/ui/ProgressBar';
-import Screen from '../../../../src/components/ui/Screen';
-import { useQuestions, useQuiz } from '../../../../src/hooks';
+import Button from '../../../src/components/ui/Button';
+import Card from '../../../src/components/ui/Card';
+import Chip from '../../../src/components/ui/Chip';
+import ErrorState from '../../../src/components/ui/ErrorState';
+import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import ProgressBar from '../../../src/components/ui/ProgressBar';
+import Screen from '../../../src/components/ui/Screen';
+import { useQuestions, useQuiz } from '../../../src/hooks';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 

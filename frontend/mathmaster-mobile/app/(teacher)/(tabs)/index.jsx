@@ -2,15 +2,15 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import Avatar from '../../../../src/components/ui/Avatar';
-import Card from '../../../../src/components/ui/Card';
-import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
-import ProgressBar from '../../../../src/components/ui/ProgressBar';
-import Screen from '../../../../src/components/ui/Screen';
-import StatTile from '../../../../src/components/ui/StatTile';
-import { greeting } from '../../../../src/lib/format';
-import { useTeacherOverview } from '../../../../src/hooks';
-import { useAuthStore } from '../../../../src/stores/authStore';
+import Avatar from '../../../src/components/ui/Avatar';
+import Card from '../../../src/components/ui/Card';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import ProgressBar from '../../../src/components/ui/ProgressBar';
+import Screen from '../../../src/components/ui/Screen';
+import StatTile from '../../../src/components/ui/StatTile';
+import { greeting } from '../../../src/lib/format';
+import { useTeacherOverview } from '../../../src/hooks';
+import { useAuthStore } from '../../../src/stores/authStore';
 
 export default function TeacherDashboardScreen() {
   const user = useAuthStore((s) => s.user);

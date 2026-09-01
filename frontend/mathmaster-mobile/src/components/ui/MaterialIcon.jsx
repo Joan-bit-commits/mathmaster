@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Text } from 'react-native';
 
-import { mapIcon } from '../lib/iconMap';
+import { mapIcon } from '../../lib/iconMap';
 
 const PALETTE = {
   primary: '#006591',

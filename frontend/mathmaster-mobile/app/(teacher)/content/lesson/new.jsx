@@ -2,10 +2,10 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import AppBar from '../../../../../src/components/ui/AppBar';
-import Button from '../../../../../src/components/ui/Button';
-import Input from '../../../../../src/components/ui/Input';
-import MaterialIcon from '../../../../../src/components/ui/MaterialIcon';
+import AppBar from '../../../../src/components/ui/AppBar';
+import Button from '../../../../src/components/ui/Button';
+import Input from '../../../../src/components/ui/Input';
+import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
 import { createLesson } from '../../../../src/services/teacher';
 
 export default function CreateLessonScreen() {

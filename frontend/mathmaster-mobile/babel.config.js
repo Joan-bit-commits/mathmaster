@@ -2,6 +2,13 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ['babel-preset-expo'],
-    plugins: ['nativewind/babel', 'react-native-reanimated/plugin'],
+    plugins: [
+      // nativewind/babel wraps its plugins in a preset-style object; inline the
+      // two real plugins it would apply (css-interop imports + JSX runtime) and
+      // reanimated's worklets plugin last.
+      [require.resolve('react-native-css-interop/dist/babel-plugin'), {}],
+      ['@babel/plugin-transform-react-jsx', { runtime: 'automatic', importSource: 'react-native-css-interop' }],
+      'react-native-worklets/plugin',
+    ],
   };
 };

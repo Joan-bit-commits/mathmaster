@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import Card from '../../../../src/components/ui/Card';
-import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
-import Screen from '../../../../src/components/ui/Screen';
-import { friendlyDate } from '../../../../src/lib/format';
-import { useTeacherStudents } from '../../../../src/hooks';
+import Card from '../../../src/components/ui/Card';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import Screen from '../../../src/components/ui/Screen';
+import { friendlyDate } from '../../../src/lib/format';
+import { useTeacherStudents } from '../../../src/hooks';
 
 /** Teacher view of student_performance_detail. */
 export default function TeacherStudentDetailScreen() {

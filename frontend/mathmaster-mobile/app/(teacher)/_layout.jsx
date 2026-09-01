@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import MaterialIcon from '../../src/components/ui/MaterialIcon';
 
 const TABS = [
   { name: 'index', label: 'Dashboard', icon: 'dashboard' },
