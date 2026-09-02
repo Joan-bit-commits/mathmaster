@@ -25,7 +25,7 @@ export default function LoginScreen() {
         demoRole === 'teacher' ? 'teacher_demo' : username || 'student_demo',
         password || 'Str0ngPass!'
       );
-      router.replace(user.role === 'teacher' ? '/(teacher)/(tabs)' : '/(student)/(tabs)');
+      router.replace(user.role === 'teacher' ? '/(teacher)' : '/(student)');
     } catch (e) {
       setError(e.message === 'NETWORK_ERROR' ? 'Cannot reach the server. Check your connection.' : e.message);
     } finally {

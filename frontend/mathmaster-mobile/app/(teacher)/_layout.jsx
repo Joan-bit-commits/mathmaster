@@ -4,14 +4,14 @@ import React from 'react';
 import MaterialIcon from '../../src/components/ui/MaterialIcon';
 
 const TABS = [
-  { name: 'index', label: 'Dashboard', icon: 'dashboard' },
-  { name: 'curriculum', label: 'Curriculum', icon: 'menu-book' },
-  { name: 'students', label: 'Students', icon: 'groups' },
-  { name: 'content', label: 'Content', icon: 'add-box' },
-  { name: 'profile', label: 'Profile', icon: 'person' },
+  { name: '(tabs)/index', label: 'Dashboard', icon: 'dashboard' },
+  { name: '(tabs)/curriculum', label: 'Curriculum', icon: 'menu-book' },
+  { name: '(tabs)/students', label: 'Students', icon: 'groups' },
+  { name: '(tabs)/content', label: 'Content', icon: 'add-box' },
+  { name: '(tabs)/profile', label: 'Profile', icon: 'person' },
 ];
 
-export default function TeacherTabLayout() {
+export default function TeacherLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -35,6 +35,12 @@ export default function TeacherTabLayout() {
           }}
         />
       ))}
+      <Tabs.Screen name="topic/[id]" options={{ href: null }} />
+      <Tabs.Screen name="student/[id]" options={{ href: null }} />
+      <Tabs.Screen name="content/topic/new" options={{ href: null }} />
+      <Tabs.Screen name="content/lesson/new" options={{ href: null }} />
+      <Tabs.Screen name="content/quiz/new" options={{ href: null }} />
+      <Tabs.Screen name="content/question/new" options={{ href: null }} />
     </Tabs>
   );
 }

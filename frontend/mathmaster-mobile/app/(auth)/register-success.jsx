@@ -46,7 +46,7 @@ export default function RegisterSuccessScreen() {
           </View>
         ))}
         <View className="w-full mt-6">
-          <Button label="Go to dashboard" onPress={() => router.replace(user?.role === 'teacher' ? '/(teacher)/(tabs)' : '/(student)/(tabs)')} fullWidth accessibilityLabel="Go to dashboard" />
+          <Button label="Go to dashboard" onPress={() => router.replace(user?.role === 'teacher' ? '/(teacher)' : '/(student)')} fullWidth accessibilityLabel="Go to dashboard" />
         </View>
       </Animated.View>
     </SafeAreaView>

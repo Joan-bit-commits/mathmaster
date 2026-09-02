@@ -41,7 +41,7 @@ export default function RootLayout() {
 
   // Navigate once, after (a) store rehydration, (b) fonts, (c) navigator ready.
   const target = isAuthenticated && user
-    ? user.role === 'teacher' ? '/(teacher)/(tabs)' : '/(student)/(tabs)'
+    ? user.role === 'teacher' ? '/(teacher)' : '/(student)'
     : null;
 
   useEffect(() => {

@@ -17,7 +17,7 @@ export default function NotFoundScreen() {
           <Text className="font-body-md text-body-md text-on-surface-variant text-center mb-8">
             The screen you're looking for doesn't exist (yet).
           </Text>
-          <Button label="Go home" onPress={() => router.replace('/(student)/(tabs)')} fullWidth accessibilityLabel="Go home" />
+          <Button label="Go home" onPress={() => router.replace('/(student)')} fullWidth accessibilityLabel="Go home" />
         </View>
       </Screen>
     </View>
