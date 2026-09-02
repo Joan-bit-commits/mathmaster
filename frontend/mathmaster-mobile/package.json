@@ -25,7 +25,7 @@
     "react-hook-form": "^7.87.0",
     "react-native": "0.86.3",
     "react-native-markdown-display": "^7.0.2",
-    "react-native-reanimated": "4.5.1",
+    "react-native-reanimated": "^3.19.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
@@ -41,7 +41,8 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "~57.0.10"
+    "babel-preset-expo": "~57.0.10",
+    "tailwindcss": "^3.4.17"
   },
   "overrides": {
     "decode-uri-component": "^0.5.0",
