@@ -20,7 +20,7 @@
       "package": "ug.mathmaster.mobile",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#006591"
       }
     },

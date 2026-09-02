@@ -9,6 +9,7 @@ import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import { useTopics } from '../../../src/hooks';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FILTERS = ['All', 'S1', 'S2', 'S3', 'S4', 'Incomplete'];
 
@@ -74,7 +75,3 @@ export default function CurriculumManagementScreen() {
   );
 }
 
-// SafeAreaView import shim (tab screens render inside the navigator's safe area)
-function SafeAreaView({ children, className }) {
-  return <View className={className}>{children}</View>;
-}

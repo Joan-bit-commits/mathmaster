@@ -13,9 +13,10 @@ const VARIANTS = {
   tertiary: 'bg-transparent',
   destructive: 'bg-error',
   gradient: 'bg-primary-container shadow-level-1',
-  icon: 'w-10 h-10 rounded-full bg-surface-container-low items-center justify-center',
+  icon: 'w-10 h-10 rounded-full bg-surface-container-low p-0',
 };
 
+// Tailwind text classes for the label, and MaterialIcon palette names for the icon.
 const TEXT_COLORS = {
   primary: 'text-on-primary',
   secondary: 'text-primary',
@@ -23,6 +24,15 @@ const TEXT_COLORS = {
   destructive: 'text-on-error',
   gradient: 'text-on-primary-container',
   icon: 'text-on-surface-variant',
+};
+
+const ICON_COLORS = {
+  primary: 'on-primary',
+  secondary: 'primary',
+  tertiary: 'primary',
+  destructive: 'on-error',
+  gradient: 'on-primary-container',
+  icon: 'on-surface-variant',
 };
 
 /**
@@ -51,13 +61,15 @@ export default function Button({
       variant === 'primary' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light
     ).catch(() => {});
   };
-  const handlePressOut = () => scale.value = withTiming(1, { duration: 120 });
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 120 });
+  };
 
-  const sizeClass = variant === 'icon' ? '' : SIZES[size];
-  const widthClass = fullWidth || variant !== 'icon' ? 'w-full' : '';
+  const isIcon = variant === 'icon';
+  const sizeClass = isIcon ? '' : SIZES[size];
 
   return (
-    <Animated.View style={[animatedStyle, variant === 'icon' ? null : { width: fullWidth ? '100%' : undefined }]}>
+    <Animated.View style={animatedStyle}>
       <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -66,13 +78,13 @@ export default function Button({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel || label}
         accessibilityState={{ disabled: disabled || loading, busy: loading }}
-        className={`items-center justify-center flex-row rounded-2xl px-6 active:opacity-80 ${sizeClass} ${VARIANTS[variant]} ${widthClass} ${disabled ? 'opacity-50' : ''} ${className}`}
+        className={`items-center justify-center flex-row rounded-2xl active:opacity-80 ${sizeClass} ${VARIANTS[variant]} ${isIcon ? '' : 'px-6'} ${isIcon ? '' : fullWidth ? 'w-full' : ''} ${disabled ? 'opacity-50' : ''} ${className}`}
       >
         {loading ? (
           <ActivityIndicator color={variant === 'primary' || variant === 'destructive' ? '#ffffff' : '#006591'} />
         ) : (
           <View className="flex-row items-center justify-center gap-2">
-            {icon ? <MaterialIcon name={icon} size={size === 'sm' ? 18 : 20} color={TEXT_COLORS[variant]} /> : null}
+            {icon ? <MaterialIcon name={icon} size={size === 'sm' ? 18 : 20} color={ICON_COLORS[variant]} /> : null}
             {label ? (
               <Text className={`font-label-sm text-label-sm ${TEXT_COLORS[variant]}`}>{label}</Text>
             ) : (

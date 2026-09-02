@@ -9,6 +9,7 @@ import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import Screen from '../../../src/components/ui/Screen';
 import { useLesson, useQuizzes } from '../../../src/hooks';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /** Renders simple markdown-ish lesson content (headings, bold, lists). */
 function LessonContent({ content }) {

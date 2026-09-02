@@ -97,7 +97,7 @@ export default function StudentHomeScreen() {
           <Section title="Your topics" actionLabel="See all" onAction={() => router.push('/(student)/(tabs)/topics')}>
             <View className="flex-row flex-wrap gap-3">
               {featured.map((t) => (
-                <Card key={t.id} onPress={() => router.push(`/(student)/topic/${t.id}`)} className="w-[47%]">
+                <Card key={t.id} onPress={() => router.push(`/(student)/topic/${t.id}`)} className="w-[47%] flex-grow-0">
                   <View className="h-1 w-full bg-primary-container rounded-full mb-3" />
                   <Text className="font-label-sm text-label-sm text-primary uppercase mb-2">TOPIC</Text>
                   <Text className="text-[18px] leading-6 font-semibold text-on-surface mb-2">{t.name}</Text>

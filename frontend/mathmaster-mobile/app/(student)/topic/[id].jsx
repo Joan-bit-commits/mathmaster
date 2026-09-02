@@ -10,6 +10,7 @@ import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import { useLessons, useTopic } from '../../../src/hooks';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TopicDetailScreen() {
   const { id } = useLocalSearchParams();

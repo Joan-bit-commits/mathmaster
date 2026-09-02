@@ -11,6 +11,7 @@ import StatTile from '../../../src/components/ui/StatTile';
 import { greeting } from '../../../src/lib/format';
 import { useTeacherOverview } from '../../../src/hooks';
 import { useAuthStore } from '../../../src/stores/authStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TeacherDashboardScreen() {
   const user = useAuthStore((s) => s.user);
