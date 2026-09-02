@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import * as authService from '../services/auth';
+// Imported lazily via require inside actions to avoid a require cycle
+// (authStore -> services/auth -> services/api -> authStore).
 
 export const useAuthStore = create(
   persist(
@@ -18,6 +19,7 @@ export const useAuthStore = create(
         set({ accessToken: access, refreshToken: refresh, isAuthenticated: true }),
 
       login: async (username, password) => {
+        const authService = require('../services/auth');
         const data = await authService.login(username, password);
         set({ accessToken: data.access, refreshToken: data.refresh, isAuthenticated: true });
         const user = await authService.profile(data.access);
@@ -26,6 +28,7 @@ export const useAuthStore = create(
       },
 
       register: async (payload) => {
+        const authService = require('../services/auth');
         const data = await authService.register(payload);
         set({ accessToken: data.access, refreshToken: data.refresh, isAuthenticated: true });
         const user = await authService.profile(data.access);
@@ -34,6 +37,7 @@ export const useAuthStore = create(
       },
 
       refreshProfile: async () => {
+        const authService = require('../services/auth');
         const user = await authService.profile(get().accessToken);
         set({ user });
       },

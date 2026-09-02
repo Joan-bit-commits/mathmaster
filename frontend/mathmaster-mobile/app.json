@@ -15,6 +15,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "ug.mathmaster.mobile"
     },
+    "scheme": "mathmaster",
     "android": {
       "package": "ug.mathmaster.mobile",
       "softwareKeyboardLayoutMode": "resize",
