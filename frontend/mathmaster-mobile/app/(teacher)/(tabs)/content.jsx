@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Card from '../../../src/components/ui/Card';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
@@ -20,7 +21,7 @@ const ACTIVITY = [
 
 export default function AuthoringHubScreen() {
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Authoring hub">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Authoring hub">
       <Screen>
         <View className="px-[24px] pt-4 pb-2">
           <Text accessibilityRole="header" className="text-[24px] leading-8 font-semibold text-on-surface">Content</Text>
@@ -65,6 +66,6 @@ export default function AuthoringHubScreen() {
           <Text className="font-label-sm text-label-sm text-on-primary">Quick add</Text>
         </Pressable>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

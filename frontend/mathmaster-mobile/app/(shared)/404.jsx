@@ -1,13 +1,14 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../src/components/ui/Button';
 import Screen from '../../src/components/ui/Screen';
 
 export default function NotFoundScreen() {
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Page not found">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Page not found">
       <Screen>
         <View className="flex-1 items-center justify-center px-[24px]">
           <Text className="text-[64px] leading-[72px] font-bold text-primary mb-2">404</Text>
@@ -20,6 +21,6 @@ export default function NotFoundScreen() {
           <Button label="Go home" onPress={() => router.replace('/(student)')} fullWidth accessibilityLabel="Go home" />
         </View>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

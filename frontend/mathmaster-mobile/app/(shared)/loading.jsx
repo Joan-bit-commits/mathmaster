@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoadingSkeleton from '../../src/components/ui/LoadingSkeleton';
 import Screen from '../../src/components/ui/Screen';
@@ -8,7 +9,7 @@ import Screen from '../../src/components/ui/Screen';
 /** Generic loading skeleton screen (Suspense fallback). */
 export default function LoadingScreen() {
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Loading">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Loading">
       <Screen>
         <View className="px-[24px] pt-6 gap-4">
           <LoadingSkeleton variant="card" />
@@ -23,6 +24,6 @@ export default function LoadingScreen() {
           ))}
         </View>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

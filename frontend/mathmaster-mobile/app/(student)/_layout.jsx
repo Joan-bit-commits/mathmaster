@@ -5,7 +5,7 @@ import MaterialIcon from '../../src/components/ui/MaterialIcon';
 
 const TABS = [
   { name: '(tabs)/index', label: 'Home', icon: 'home' },
-  { name: '(tabs)/topics', label: 'Topics', icon: 'menu-book' },
+  { name: '(tabs)/topics', label: 'Topics', icon: 'book' },
   { name: '(tabs)/ai-tutor', label: 'AI Tutor', icon: 'smart_toy' },
   { name: '(tabs)/performance', label: 'Performance', icon: 'leaderboard' },
   { name: '(tabs)/profile', label: 'Profile', icon: 'person' },

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Card from '../../../src/components/ui/Card';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
@@ -15,7 +16,7 @@ export default function TeacherStudentDetailScreen() {
   const student = students?.find((s) => String(s.id) === String(id)) || students?.[0];
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Student detail (teacher)">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Student detail (teacher)">
       <Screen>
         <View className="flex-row items-center gap-3 px-[24px] h-14">
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back" className="w-10 h-10 rounded-full bg-surface-container-low items-center justify-center">
@@ -64,7 +65,7 @@ export default function TeacherStudentDetailScreen() {
           </Pressable>
         </ScrollView>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }
 

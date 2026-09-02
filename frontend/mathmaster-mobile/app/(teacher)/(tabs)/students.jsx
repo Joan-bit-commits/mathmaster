@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Avatar from '../../../src/components/ui/Avatar';
 import Card from '../../../src/components/ui/Card';
@@ -28,7 +29,7 @@ export default function StudentsRosterScreen() {
   const { data, isLoading, refetch, isRefetching } = useTeacherStudents();
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Students roster">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Students roster">
       <Screen>
         <View className="px-[24px] pt-4 pb-2">
           <Text accessibilityRole="header" className="text-[24px] leading-8 font-semibold text-on-surface">Students</Text>
@@ -78,6 +79,6 @@ export default function StudentsRosterScreen() {
           />
         )}
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

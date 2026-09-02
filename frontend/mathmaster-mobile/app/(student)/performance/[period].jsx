@@ -7,6 +7,7 @@ import Button from '../../../src/components/ui/Button';
 import Card from '../../../src/components/ui/Card';
 import ErrorState from '../../../src/components/ui/ErrorState';
 import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
+import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import StatTile from '../../../src/components/ui/StatTile';

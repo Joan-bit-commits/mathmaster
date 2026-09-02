@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../src/components/ui/Button';
 import Chip from '../../src/components/ui/Chip';
@@ -18,7 +19,7 @@ export default function SearchScreen() {
   const results = (data || []).filter((t) => t.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Search">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Search">
       <Screen>
         <View className="px-[24px] pt-4 pb-3 flex-row items-center gap-3">
           <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Close search">
@@ -51,6 +52,6 @@ export default function SearchScreen() {
           )}
         </ScrollView>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

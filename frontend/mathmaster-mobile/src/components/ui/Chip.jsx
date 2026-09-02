@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 const TONES = {
   primary: 'bg-[#c9e6ff] text-[#001e2f]',

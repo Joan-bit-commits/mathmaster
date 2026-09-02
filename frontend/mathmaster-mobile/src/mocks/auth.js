@@ -28,7 +28,11 @@ export async function mockRegister(payload) {
 
 export async function mockProfile() {
   await sleep(150);
-  return mockUser('Alex Student', 'student');
+  // Respect the role chosen at login (teacher_demo -> teacher portal).
+  const { useAuthStore } = require('../stores/authStore');
+  const { username } = useAuthStore.getState();
+  const role = (username || '').toLowerCase().includes('teacher') ? 'teacher' : 'student';
+  return mockUser(username || 'Alex Student', role);
 }
 
 export function mockUser(username = 'Alex Student', role = 'student') {

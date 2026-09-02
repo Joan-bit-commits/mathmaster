@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../src/components/ui/Button';
 import MaterialIcon from '../../src/components/ui/MaterialIcon';
@@ -31,7 +32,7 @@ const GROUPS = [
 
 export default function NotificationsScreen() {
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Notifications">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Notifications">
       <Screen>
         <View className="flex-row items-center justify-between px-[24px] h-14">
           <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Go back">
@@ -63,6 +64,6 @@ export default function NotificationsScreen() {
           </View>
         ))}
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }

@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../src/components/ui/Button';
+import MaterialIcon from '../../src/components/ui/MaterialIcon';
 import Input from '../../src/components/ui/Input';
 import Screen from '../../src/components/ui/Screen';
 
@@ -24,7 +26,7 @@ export default function ChangePasswordScreen() {
   const score = strengthOf(next);
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Change password">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Change password">
       <Screen>
         <View className="flex-row items-center gap-3 px-[24px] h-14">
           <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Go back">
@@ -62,11 +64,6 @@ export default function ChangePasswordScreen() {
           />
         </ScrollView>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
-}
-
-function BackIcon() {
-  const MaterialIcon = require('../../src/components/ui/MaterialIcon').default;
-  return <MaterialIcon name="arrow_back" size={22} color="on-surface-variant" />;
 }

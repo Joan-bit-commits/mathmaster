@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../src/components/ui/Button';
 import MaterialIcon from '../../src/components/ui/MaterialIcon';
@@ -20,7 +21,7 @@ export default function SettingsScreen() {
   const logout = useAuthStore((s) => s.logout);
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Settings">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Settings">
       <Screen>
         <View className="flex-row items-center gap-3 px-[24px] h-14">
           <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Go back">
@@ -49,6 +50,6 @@ export default function SettingsScreen() {
           <Button variant="destructive" label="Sign out" icon="logout" onPress={() => { logout(); router.replace('/(auth)/login'); }} fullWidth accessibilityLabel="Sign out" />
         </View>
       </Screen>
-    </View>
+    </SafeAreaView>
   );
 }
