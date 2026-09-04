@@ -1,4 +1,4 @@
-def math_tutor_prompt(topic, question, level, context=""):
+def math_tutor_prompt(topic, question, level, context=''):
     return f"""
 You are MathMaster AI Tutor, an experienced mathematics teacher for Ugandan secondary school students.
 

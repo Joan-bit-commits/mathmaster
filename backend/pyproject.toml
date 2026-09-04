@@ -1,0 +1,30 @@
+[project]
+name = "mathmaster-backend"
+version = "1.0.0"
+description = "MathMaster Django REST backend"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+testpaths = ["accounts/tests", "learning/tests", "ai_tutor/tests", "analytics/tests"]
+addopts = "--cov=accounts --cov=learning --cov=ai_tutor --cov-report=term-missing -q"
+filterwarnings = [
+    "ignore::DeprecationWarning:google.*",
+    "ignore::Warning:google.generativeai*",
+]
+
+[tool.coverage.run]
+source = ["accounts", "learning", "ai_tutor"]
+omit = ["*/migrations/*", "*/tests/*", "*/venv/*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+exclude = ["venv", ".venv", "node_modules", "migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "single"

@@ -1,0 +1,1 @@
+select * FROM accounts_user;
