@@ -22,7 +22,9 @@ export const useAuthStore = create(
         const authService = require('../services/auth');
         const data = await authService.login(username, password);
         set({ accessToken: data.access, refreshToken: data.refresh, isAuthenticated: true });
-        const user = await authService.profile(data.access);
+        // Prefer the user object returned by login (mock + real API both include
+        // it); only fall back to a profile fetch when absent.
+        const user = data.user ?? (await authService.profile(data.access));
         set({ user });
         return user;
       },
