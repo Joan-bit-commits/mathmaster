@@ -3,9 +3,10 @@ import { useFonts } from 'expo-font';
 import { Stack, useRootNavigationState, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '../global.css';
 import { queryClient } from '../src/lib/queryClient';
 import { rehydrateAuth, useAuthStore } from '../src/stores/authStore';
@@ -15,9 +16,14 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 /**
  * Root layout.
  *
- * Routing is done with an imperative router.replace inside an effect (not a
- * <Redirect> in render) — a render-time Redirect from the root layout re-fires
- * on every render pass and causes "Maximum update depth exceeded".
+ * IMPORTANT: the <Stack> navigator must ALWAYS stay mounted. Unmounting it
+ * (e.g. showing a spinner in its place while state settles) leaves mounted
+ * screens without a navigation context — any interaction on them throws
+ * "Couldn't find a navigation context".
+ *
+ * The auth redirect is an imperative router.replace fired once (guarded by a
+ * ref) after rehydration + fonts + navigator readiness — never a render-time
+ * <Redirect>, which re-fires on every render and loops.
  */
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -26,7 +32,7 @@ export default function RootLayout() {
     HankenGrotesk_700Bold: require('@expo-google-fonts/hanken-grotesk').HankenGrotesk_700Bold,
   });
 
-  const { isAuthenticated, user, isHydrated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
@@ -39,41 +45,40 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
-  // Navigate once, after (a) store rehydration, (b) fonts, (c) navigator ready.
-  const target = isAuthenticated && user
-    ? user.role === 'teacher' ? '/(teacher)' : '/(student)'
-    : null;
-
+  const didNavigate = useRef(false);
   useEffect(() => {
+    if (didNavigate.current) return;
     if (!rehydrated || !fontsLoaded || !navigationState?.key) return;
-    if (target) {
-      router.replace(target);
-    } else if (!isAuthenticated) {
-      // Only push into the auth flow once per cold start; the auth group's own
-      // splash screen takes it from there.
+    didNavigate.current = true;
+    if (isAuthenticated && user) {
+      router.replace(user.role === 'teacher' ? '/(teacher)' : '/(student)');
+    } else {
       router.replace('/(auth)/splash');
     }
-  }, [rehydrated, fontsLoaded, navigationState?.key, target, isAuthenticated, router]);
+  }, [rehydrated, fontsLoaded, navigationState?.key, isAuthenticated, user, router]);
 
-  if (!fontsLoaded || !rehydrated || !navigationState?.key) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9ff' }}>
-        <ActivityIndicator size="large" color="#006591" />
-      </View>
-    );
-  }
-
+  // The navigator is ALWAYS mounted; the spinner overlays it while booting.
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(student)" />
-          <Stack.Screen name="(teacher)" />
-          <Stack.Screen name="(shared)" />
-        </Stack>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <KeyboardProvider>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(student)" />
+            <Stack.Screen name="(teacher)" />
+            <Stack.Screen name="(shared)" />
+          </Stack>
+          {(!fontsLoaded || !rehydrated || !navigationState?.key) && (
+            <View
+              pointerEvents="auto"
+              style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9ff' }}
+            >
+              <ActivityIndicator size="large" color="#006591" />
+            </View>
+          )}
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </KeyboardProvider>
   );
 }

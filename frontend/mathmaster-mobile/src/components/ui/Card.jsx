@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 
 const VARIANTS = {
-  default: 'bg-surface-container-lowest border border-surface-variant/50 shadow-level-1',
+  default: 'bg-surface-container-lowest shadow-level-1',
   flat: 'bg-surface-container-lowest',
   hero: 'bg-inverse-surface shadow-level-3',
   outlined: 'bg-transparent border-[1.5px] border-outline-variant',

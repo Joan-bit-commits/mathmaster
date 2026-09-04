@@ -1,31 +1,35 @@
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Text } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Splash → onboarding after 1.5s with fade-out.
+import AnimatedBackground from '../../src/components/ui/AnimatedBackground';
+import AnimatedLogo from '../../src/components/ui/AnimatedLogo';
+
 export default function SplashScreen() {
   const opacity = useSharedValue(1);
-  const scale = useSharedValue(0.9);
 
   useEffect(() => {
-    scale.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.back(1.4)) });
     const t = setTimeout(() => {
-      opacity.value = withTiming(0, { duration: 400 });
+      opacity.value = withTiming(0, { duration: 400, easing: Easing.in(Easing.quad) });
       setTimeout(() => router.replace('/(auth)/onboarding'), 420);
-    }, 1500);
+    }, 1600);
     return () => clearTimeout(t);
-  }, [opacity, scale]);
+  }, [opacity]);
 
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ scale: scale.value }] }));
+  const fadeOutStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
     <SafeAreaView className="flex-1 bg-primary items-center justify-center" accessibilityLabel="MathMaster splash">
-      <Animated.View style={style} className="items-center">
-        <Text className="text-6xl mb-4">📐</Text>
-        <Text className="text-[32px] leading-10 font-bold text-white tracking-tight">MathMaster</Text>
-        <Text className="font-body-md text-body-md text-[#89ceff] mt-2">Master math. Unlock your future.</Text>
+      <AnimatedBackground colors={['#4648d4', '#0284c7']} />
+      <Animated.View style={fadeOutStyle} className="items-center">
+        <AnimatedLogo emoji="📐" size={104} />
+        <Animated.Text entering={FadeInDown.delay(350).duration(400)} className="text-[32px] leading-10 font-bold text-white tracking-tight mt-5">
+          MathMaster
+        </Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(500).duration(400)} className="font-body-md text-body-md text-[#89ceff] mt-2">
+          Master math. Unlock your future.
+        </Animated.Text>
       </Animated.View>
     </SafeAreaView>
   );

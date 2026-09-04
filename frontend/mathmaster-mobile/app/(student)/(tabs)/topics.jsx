@@ -13,6 +13,8 @@ import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
 import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import { useTopics } from '../../../src/hooks';
+import { useTabBarSpacing } from '../../../src/hooks/useTabBarSpacing';
+
 
 const LEVELS = ['All', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'UNIVERSITY'];
 
@@ -34,6 +36,7 @@ function TopicCard({ topic, index }) {
 export default function AllTopicsScreen() {
   const [level, setLevel] = useState('All');
   const { data, isLoading, isError, refetch, isRefetching } = useTopics(level === 'All' ? {} : { level });
+  const tabBarSpacing = useTabBarSpacing();
 
   return (
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="All topics">
@@ -68,7 +71,8 @@ export default function AllTopicsScreen() {
             keyExtractor={(t) => String(t.id)}
             numColumns={2}
             columnWrapperClassName="gap-3 px-[24px]"
-            contentContainerClassName="gap-3 pb-8"
+            contentContainerStyle={{ paddingBottom: tabBarSpacing + 24 }}
+            contentContainerClassName="gap-3"
             refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#006591" colors={['#006591']} />}
             renderItem={({ item, index }) => <TopicCard topic={item} index={index} />}
           />

@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AnimatedBackground from '../../src/components/ui/AnimatedBackground';
 import Button from '../../src/components/ui/Button';
 import MaterialIcon from '../../src/components/ui/MaterialIcon';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -18,12 +19,12 @@ export default function RegisterSuccessScreen() {
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    // celebratory haptic
     import('expo-haptics').then((H) => H.notificationAsync(H.NotificationFeedbackType.Success)).catch(() => {});
   }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-background items-center justify-center px-[24px]" accessibilityLabel="Registration success">
+      <AnimatedBackground colors={['#0f9d58', '#006591']} />
       <Animated.View entering={ZoomIn.duration(500)} className="w-24 h-24 rounded-full bg-primary items-center justify-center mb-6">
         <MaterialIcon name="check" size={48} color="on-primary" />
       </Animated.View>
@@ -35,7 +36,11 @@ export default function RegisterSuccessScreen() {
           Your account is ready. Here's how to get started:
         </Text>
         {QUICK_START.map((s, i) => (
-          <View key={s.title} className="flex-row items-center gap-3 bg-surface-container-lowest rounded-2xl p-4 border border-surface-variant/50 w-full mb-3">
+          <Animated.View
+            key={s.title}
+            entering={FadeInDown.delay(300 + i * 100).duration(350)}
+            className="flex-row items-center gap-3 bg-surface-container-lowest rounded-2xl p-4 shadow-level-1 w-full mb-3"
+          >
             <View className="w-10 h-10 rounded-full bg-[#c9e6ff] items-center justify-center">
               <MaterialIcon name={s.icon} size={20} color="primary" />
             </View>
@@ -43,7 +48,7 @@ export default function RegisterSuccessScreen() {
               <Text className="font-title-lg text-title-lg text-on-surface">{`${i + 1}. ${s.title}`}</Text>
               <Text className="font-body-sm text-body-sm text-on-surface-variant">{s.body}</Text>
             </View>
-          </View>
+          </Animated.View>
         ))}
         <View className="w-full mt-6">
           <Button label="Go to dashboard" onPress={() => router.replace(user?.role === 'teacher' ? '/(teacher)' : '/(student)')} fullWidth accessibilityLabel="Go to dashboard" />

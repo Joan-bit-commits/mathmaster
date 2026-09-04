@@ -1,211 +1,256 @@
-import React, { useCallback } from 'react';
-import { View, Pressable, StyleSheet, Platform, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
+import React, { useEffect } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 
-import MaterialIcon from './MaterialIcon';
+import MaterialIcon from "./MaterialIcon";
 
-// Luminous Mathematics palette
-const PRIMARY = '#006591';
-const PRIMARY_DARK = '#004c6e'; // on-primary-fixed-variant — visibly darker than PRIMARY
-const ON_PRIMARY = '#ffffff';
-const SURFACE = '#e5eeff';
-const ON_SURFACE_VARIANT = '#3e4850';
+const COLORS = {
+  primary: "#006591",
+  onSurfaceVariant: "#3e4850",
+  barBg: "#e5eeff",
+};
 
-/**
- * Route names are BARE ('index', 'topics', …) because this bar is rendered by
- * the Tabs navigator inside app/(student)/(tabs)/_layout.jsx — the '(tabs)'
- * group segment is not part of the route name at this level.
- */
-const TABS = [
-  { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'topics', label: 'Topics', icon: 'menu-book' },
-  { name: 'ai-tutor', label: 'AI Tutor', icon: 'smart_toy' },
-  { name: 'performance', label: 'Performance', icon: 'leaderboard' },
-  { name: 'profile', label: 'Profile', icon: 'person' },
+const VISIBLE_TABS = [
+  { key: "index", label: "Home", icon: "home" },
+  { key: "topics", label: "Topics", icon: "book" },
+  { key: "ai-tutor", label: "AI Tutor", icon: "smart_toy", isAI: true },
+  { key: "performance", label: "Performance", icon: "leaderboard" },
+  { key: "profile", label: "Profile", icon: "person" },
 ];
-const CENTER_INDEX = 2;
-const TAB_NAMES = new Set(TABS.map((t) => t.name));
 
-export default function FloatingTabBar({ state, descriptors, navigation, insets: insetsProp }) {
-  let insets = { top: 0, bottom: 0, left: 0, right: 0 };
-  try {
-    const safe = useSafeAreaInsets();
-    if (safe && typeof safe.bottom === 'number') insets = safe;
-  } catch (_) {
-    // provider not mounted — keep defaults
-  }
-  if (insetsProp && typeof insetsProp.bottom === 'number') insets = insetsProp;
+function matchesKey(routeName, key) {
+  return routeName === key || routeName.endsWith("/" + key);
+}
 
-  const bottomPad = Math.max(insets.bottom, 12) + 10;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-  const currentName = state.routes[state.index]?.name;
+function RegularTab({ tab, isFocused, onPress }) {
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
 
-  // Hide entirely on any non-tab page (history, chat, quiz, etc.)
-  if (currentName && !TAB_NAMES.has(currentName)) {
-    return null;
-  }
+  useEffect(() => {
+    scale.value = withSpring(isFocused ? 1.12 : 1, {
+      damping: 12,
+      stiffness: 180,
+    });
+    lift.value = withSpring(isFocused ? -3 : 0, {
+      damping: 12,
+      stiffness: 180,
+    });
+  }, [isFocused]);
 
-  const handlePress = useCallback(
-    (route, isFocused) => {
-      const event = navigation.emit({
-        type: 'tabPress',
-        target: route.key,
-        canPreventDefault: true,
-      });
-      Haptics.selectionAsync().catch(() => {});
-      if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(route.name, route.params);
-      }
-    },
-    [navigation],
-  );
-
-  const hasFiveRoutes = state.routes.length >= 5;
-  const centerRoute = hasFiveRoutes ? state.routes[CENTER_INDEX] : null;
-  const isCenterFocused = hasFiveRoutes && state.index === CENTER_INDEX;
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }, { translateY: lift.value }],
+  }));
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrapper, { paddingBottom: bottomPad }]}>
-      {/* Floating pill: 4 normal tabs + 1 empty slot for the center button */}
+    <Pressable
+      onPress={onPress}
+      style={styles.tabItem}
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={tab.label}
+    >
+      <Animated.View style={iconStyle}>
+        <MaterialIcon
+          name={tab.icon}
+          size={23}
+          color={isFocused ? "primary" : "on-surface-variant"}
+        />
+      </Animated.View>
+      <Text
+        style={[
+          styles.label,
+          { color: isFocused ? COLORS.primary : COLORS.onSurfaceVariant },
+        ]}
+        numberOfLines={1}
+      >
+        {tab.label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function AiTabButton({ tab, isFocused, onPress }) {
+  const pressScale = useSharedValue(1);
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    // gentle attention pulse while not focused; stops when active
+    if (!isFocused) {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1.06, {
+            duration: 900,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      pulse.value = withTiming(1, { duration: 200 });
+    }
+  }, [isFocused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value * pulse.value }],
+  }));
+
+  return (
+    <View style={styles.aiSlot}>
+      <AnimatedPressable
+        onPress={onPress}
+        onPressIn={() => {
+          pressScale.value = withSpring(0.9, { damping: 10, stiffness: 300 });
+        }}
+        onPressOut={() => {
+          pressScale.value = withSpring(1, { damping: 10, stiffness: 300 });
+        }}
+        style={[styles.aiButton, animatedStyle]}
+        accessibilityRole="button"
+        accessibilityState={isFocused ? { selected: true } : {}}
+        accessibilityLabel={tab.label}
+      >
+        <MaterialIcon name={tab.icon} size={26} color="on-primary" />
+      </AnimatedPressable>
+      <Text
+        style={[
+          styles.aiLabel,
+          isFocused && { color: COLORS.primary, fontWeight: "700" },
+        ]}
+      >
+        {tab.label}
+      </Text>
+    </View>
+  );
+}
+
+export default function FloatingTabBar({ state, navigation }) {
+  const insets = useSafeAreaInsets();
+
+  const focusedRoute = state.routes[state.index];
+  const isOnVisibleTab = VISIBLE_TABS.some((tab) =>
+    matchesKey(focusedRoute.name, tab.key),
+  );
+  if (!isOnVisibleTab) return null;
+
+  return (
+    <View
+      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 12) }]}
+      pointerEvents="box-none"
+    >
       <View style={styles.bar}>
-        {state.routes.map((route, index) => {
-          if (index === CENTER_INDEX) {
-            return <View key={route.key} style={styles.slot} />;
-          }
-          const isFocused = state.index === index;
-          const meta = TABS.find((t) => t.name === route.name) || { label: route.name, icon: 'circle' };
-          return (
-            <Pressable
-              key={route.key}
-              onPress={() => handlePress(route, isFocused)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={`${meta.label} tab`}
-              style={({ pressed }) => [styles.slot, pressed && styles.tabPressed]}
-            >
-              <MaterialIcon
-                name={meta.icon}
-                size={24}
-                color={isFocused ? 'primary' : 'on-surface-variant'}
+        {VISIBLE_TABS.map((tab) => {
+          const route = state.routes.find((r) => matchesKey(r.name, tab.key));
+          if (!route) return null;
+
+          const routeIndex = state.routes.indexOf(route);
+          const isFocused = state.index === routeIndex;
+
+          const onPress = () => {
+            import("expo-haptics")
+              .then((H) => H.selectionAsync())
+              .catch(() => {});
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          if (tab.isAI) {
+            return (
+              <AiTabButton
+                key={route.key}
+                tab={tab}
+                isFocused={isFocused}
+                onPress={onPress}
               />
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.label,
-                  { color: isFocused ? PRIMARY : ON_SURFACE_VARIANT },
-                ]}
-              >
-                {meta.label}
-              </Text>
-            </Pressable>
+            );
+          }
+
+          return (
+            <RegularTab
+              key={route.key}
+              tab={tab}
+              isFocused={isFocused}
+              onPress={onPress}
+            />
           );
         })}
       </View>
-
-      {/* Center AI button — absolutely positioned above the bar */}
-      {centerRoute && (
-        <View style={styles.centerOverlay} pointerEvents="box-none">
-          <Pressable
-            onPress={() => handlePress(centerRoute, isCenterFocused)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isCenterFocused }}
-            accessibilityLabel="AI Tutor tab"
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.centerButton,
-              pressed && styles.centerButtonPressed,
-              isCenterFocused && styles.centerButtonFocused,
-            ]}
-          >
-            <MaterialIcon name="smart_toy" size={28} color="on-primary" />
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    overflow: 'visible',
+    alignItems: "center",
   },
   bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: SURFACE,
-    borderRadius: 32,
-    paddingHorizontal: 8,
-    height: 64,
-    width: '100%',
-    maxWidth: 480,
-    zIndex: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0b1c30',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.16,
-        shadowRadius: 18,
-      },
-      android: {
-        elevation: 20,
-      },
-    }),
-  },
-  slot: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-  },
-  tabPressed: {
-    opacity: 0.6,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  centerOverlay: {
-    position: 'absolute',
-    top: -32,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    pointerEvents: 'box-none',
-    zIndex: 10,
-  },
-  centerButton: {
-    width: 56,
-    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.barBg,
     borderRadius: 28,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: SURFACE,
+    height: 64,
+    width: "92%",
+    paddingHorizontal: 6,
+    overflow: "visible",
     ...Platform.select({
       ios: {
-        shadowColor: PRIMARY,
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 10,
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
       },
-      android: {
-        elevation: 20,
-      },
+      android: { elevation: 10 },
     }),
   },
-  centerButtonPressed: {
-    transform: [{ scale: 0.94 }],
+  tabItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "600" },
+  aiSlot: { flex: 1, alignItems: "center", justifyContent: "flex-start" },
+  aiButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -26,
+    borderWidth: 4,
+    borderColor: COLORS.barBg,
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+      },
+      android: { elevation: 8 },
+    }),
   },
-  centerButtonFocused: {
-    backgroundColor: PRIMARY_DARK,
+  aiLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.onSurfaceVariant,
+    marginTop: 4,
   },
 });
