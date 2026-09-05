@@ -1,0 +1,3 @@
+import { useCameraPermissions, useCameraRef } from 'expo-camera';
+import { useCallback, useState } from 'react';
+export default function useCamera() { const [permission, requestPermission] = useCameraPermissions(); const cameraRef = useCameraRef(); const [flashMode, setFlashMode] = useState('off'); const [facing, setFacing] = useState('back'); const [isReady, setReady] = useState(false); const takePicture = useCallback(async () => cameraRef.current?.takePictureAsync({ quality: 0.85 }), [cameraRef]); return { hasPermission: permission?.granted ?? false, requestPermission, cameraRef, takePicture, flashMode, setFlashMode, facing, setFacing, isReady, onCameraReady: () => setReady(true) }; }

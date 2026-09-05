@@ -1,0 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
+import * as service from '../services/curriculum';
+export const useLevels = () => useQuery({ queryKey: ['curriculum', 'levels'], queryFn: service.fetchLevels });
+export const useLevel = (level) => useQuery({ queryKey: ['curriculum', 'level', level], queryFn: () => service.fetchLevel(level), enabled: Boolean(level) });
+export const useObjective = (code) => useQuery({ queryKey: ['curriculum', 'objective', code], queryFn: () => service.fetchObjective(code), enabled: Boolean(code) });
+export const useStrand = (level, code) => useQuery({ queryKey: ['curriculum', 'strand', level, code], queryFn: () => service.fetchStrand(level, code), enabled: Boolean(level && code) });
+export const useWorkedExamples = (code) => useQuery({ queryKey: ['curriculum', 'examples', code], queryFn: () => service.fetchWorkedExamples(code), enabled: Boolean(code) });
+export const useLocalProblems = (code, difficulty) => useQuery({ queryKey: ['curriculum', 'problems', code, difficulty], queryFn: () => service.fetchLocalProblems(code, difficulty), enabled: Boolean(code) });
+export const useUNEBFormat = (exam) => useQuery({ queryKey: ['curriculum', 'uneb', exam], queryFn: () => service.fetchUNEBFormat(exam) });
+export const useTextbooks = (level) => useQuery({ queryKey: ['curriculum', 'textbooks', level], queryFn: () => service.fetchTextbooks(level), enabled: Boolean(level) });
+export const useCurriculumSearch = (query) => useQuery({ queryKey: ['curriculum', 'search', query], queryFn: () => service.searchObjectives(query), enabled: Boolean(query) });
