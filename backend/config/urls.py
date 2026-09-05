@@ -17,6 +17,10 @@ urlpatterns = [
     path('api/analytics/', include('analytics.urls')),
     path('api/accounts/', include('accounts.urls')),
     path('api/ai-tutor/', include('ai_tutor.urls')),
+    path('api/curriculum/', include('curriculum.urls')),
+    path('api/documents/', include('curriculum.urls_documents')),
+    path('api/scan/', include('curriculum.urls_scan')),
+    path('api/teacher/past-papers/', include('curriculum.urls_past_papers')),
     path('api/health/', health, name='health'),
     path('', include('django_prometheus.urls')),
 ]

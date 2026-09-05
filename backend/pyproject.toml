@@ -6,7 +6,7 @@ description = "MathMaster Django REST backend"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["accounts/tests", "learning/tests", "ai_tutor/tests", "analytics/tests"]
+testpaths = ["accounts/tests", "learning/tests", "ai_tutor/tests", "analytics/tests", "curriculum/tests"]
 addopts = "--cov=accounts --cov=learning --cov=ai_tutor --cov-report=term-missing -q"
 filterwarnings = [
     "ignore::DeprecationWarning:google.*",
@@ -14,7 +14,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["accounts", "learning", "ai_tutor"]
+source = ["accounts", "learning", "ai_tutor", "curriculum"]
 omit = ["*/migrations/*", "*/tests/*", "*/venv/*"]
 
 [tool.ruff]
