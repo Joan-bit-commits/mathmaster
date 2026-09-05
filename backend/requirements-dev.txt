@@ -3,3 +3,5 @@ pytest
 pytest-django
 pytest-cov
 ruff
+Pillow==11.0.0
+PyPDF2==3.0.1
