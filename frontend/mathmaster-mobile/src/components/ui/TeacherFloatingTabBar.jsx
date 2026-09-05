@@ -5,32 +5,32 @@ import * as Haptics from 'expo-haptics';
 
 import MaterialIcon from './MaterialIcon';
 
-// Luminous Mathematics palette
+// Luminous Mathematics palette — matches FloatingTabBar (student).
 const PRIMARY = '#006591';
-const PRIMARY_DARK = '#004c6e'; // on-primary-fixed-variant — visibly darker than PRIMARY
-const ON_PRIMARY = '#ffffff';
-const SURFACE = '#e5eeff';
 const ON_SURFACE_VARIANT = '#3e4850';
+const SURFACE = '#e5eeff';
 
 /**
- * Route names are BARE ('index', 'topics', …) because this bar is rendered by
- * the Tabs navigator inside app/(student)/(tabs)/_layout.jsx — the '(tabs)'
- * group segment is not part of the route name at this level.
+ * TeacherFloatingTabBar
+ *
+ * Same floating bar as the student version (FloatingTabBar.jsx) but with ALL
+ * five icon buttons identical — no oversized raised center button.
+ *
+ * Route names may arrive group-prefixed ('(tabs)/curriculum'); matching strips
+ * the prefix so screens can live in a (tabs)/ folder.
  */
 const TABS = [
-  { name: 'index', label: 'Home', icon: 'home' },
-  { name: 'topics', label: 'Topics', icon: 'menu-book' },
-  { name: 'ai-tutor', label: 'AI Tutor', icon: 'smart_toy' },
-  { name: 'performance', label: 'Performance', icon: 'leaderboard' },
+  { name: 'index', label: 'Home', icon: 'dashboard' },
+  { name: 'curriculum', label: 'Curriculum', icon: 'menu-book' },
+  { name: 'students', label: 'Students', icon: 'groups' },
+  { name: 'content', label: 'Content', icon: 'add-box' },
   { name: 'profile', label: 'Profile', icon: 'person' },
 ];
-const CENTER_INDEX = 2;
 
-// Route names may be prefixed by the route group ('(tabs)/index'); strip it.
 const bare = (name) => name.replace(/^\(tabs\)\//, '');
 const tabFor = (routeName) => TABS.find((t) => t.name === bare(routeName));
 
-export default function FloatingTabBar({ state, descriptors, navigation, insets: insetsProp }) {
+export default function TeacherFloatingTabBar({ state, navigation, insets: insetsProp }) {
   let insets = { top: 0, bottom: 0, left: 0, right: 0 };
   try {
     const safe = useSafeAreaInsets();
@@ -44,7 +44,7 @@ export default function FloatingTabBar({ state, descriptors, navigation, insets:
 
   const currentName = bare(state.routes[state.index]?.name || '');
 
-  // Hide entirely on any non-tab page (history, chat, quiz, etc.)
+  // Hide entirely on non-tab pages (student detail, authoring forms, …).
   if (currentName && !TABS.some((t) => t.name === currentName)) {
     return null;
   }
@@ -65,17 +65,11 @@ export default function FloatingTabBar({ state, descriptors, navigation, insets:
   );
 
   const tabRoutes = state.routes.filter((r) => tabFor(r.name));
-  const centerRoute = tabRoutes.length >= 5 ? tabRoutes[CENTER_INDEX] : null;
-  const isCenterFocused = centerRoute ? state.routes[state.index]?.key === centerRoute.key : false;
 
   return (
     <View pointerEvents="box-none" style={[styles.wrapper, { paddingBottom: bottomPad }]}>
-      {/* Floating pill: 4 normal tabs + 1 empty slot for the center button */}
       <View style={styles.bar}>
-        {tabRoutes.map((route, index) => {
-          if (index === CENTER_INDEX) {
-            return <View key={route.key} style={styles.slot} />;
-          }
+        {tabRoutes.map((route) => {
           const isFocused = state.routes[state.index]?.key === route.key;
           const meta = tabFor(route.name) || { label: route.name, icon: 'circle' };
           return (
@@ -105,26 +99,6 @@ export default function FloatingTabBar({ state, descriptors, navigation, insets:
           );
         })}
       </View>
-
-      {/* Center AI button — absolutely positioned above the bar */}
-      {centerRoute && (
-        <View style={styles.centerOverlay} pointerEvents="box-none">
-          <Pressable
-            onPress={() => handlePress(centerRoute, isCenterFocused)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: isCenterFocused }}
-            accessibilityLabel="AI Tutor tab"
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.centerButton,
-              pressed && styles.centerButtonPressed,
-              isCenterFocused && styles.centerButtonFocused,
-            ]}
-          >
-            <MaterialIcon name="smart_toy" size={28} color="on-primary" />
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
@@ -174,41 +148,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     marginTop: 4,
-  },
-  centerOverlay: {
-    position: 'absolute',
-    top: -32,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    pointerEvents: 'box-none',
-    zIndex: 10,
-  },
-  centerButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: SURFACE,
-    ...Platform.select({
-      ios: {
-        shadowColor: PRIMARY,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 20,
-      },
-    }),
-  },
-  centerButtonPressed: {
-    transform: [{ scale: 0.94 }],
-  },
-  centerButtonFocused: {
-    backgroundColor: PRIMARY_DARK,
   },
 });
