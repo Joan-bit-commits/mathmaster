@@ -7,6 +7,7 @@ import Button from '../../../../src/components/ui/Button';
 import Chip from '../../../../src/components/ui/Chip';
 import Input from '../../../../src/components/ui/Input';
 import { createTopic } from '../../../../src/services/teacher';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LEVELS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'UNIVERSITY'];
 const DRAFT_KEY = 'draft-topic';
@@ -57,7 +58,7 @@ export default function CreateTopicScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Create topic">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Create topic">
       <AppBar title="New Topic" onBack={() => router.back()} rightIcon="close" onRightIconPress={() => router.back()} />
       <ScrollView contentContainerClassName="px-[24px] pb-32" keyboardShouldPersistTaps="handled">
         <Input label="Topic name" value={name} onChangeText={setName} leftIcon="menu_book" error={error} />
@@ -73,6 +74,6 @@ export default function CreateTopicScreen() {
         <Button label="Save" loading={saving} onPress={() => save(false)} accessibilityLabel="Save topic" />
         <Button variant="gradient" label="Save & add lesson" onPress={() => save(true)} accessibilityLabel="Save and add lesson" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

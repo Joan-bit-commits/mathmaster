@@ -10,7 +10,11 @@ export default function SegmentedControl({ options, value, onChange, className =
 
   useEffect(() => {
     if (segmentWidth) {
-      translateX.value = withSpring(activeIndex * segmentWidth, { damping: 16, stiffness: 180 });
+      translateX.value = withSpring(activeIndex * segmentWidth, {
+        damping: 30,
+        stiffness: 220,
+        mass: 0.9,
+      });
     }
   }, [activeIndex, segmentWidth, translateX]);
 
