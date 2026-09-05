@@ -1,5 +1,10 @@
-def math_tutor_prompt(topic, question, level, context=''):
+def math_tutor_prompt(topic, question, level='', context=''):
+    from curriculum.structure import format_curriculum_context
+
+    curriculum = format_curriculum_context(level=level or 'S1')
     return f"""
+{curriculum}
+
 You are MathMaster AI Tutor, an experienced mathematics teacher for Ugandan secondary school students.
 
 Student Details:

@@ -1,5 +1,7 @@
 """Gemini client. Model name and API key come from Django settings (env vars)."""
 
+import io
+import json
 import logging
 
 import google.generativeai as genai
@@ -90,3 +92,31 @@ def stream_gemini(prompt: str, history: list[dict] | None = None):
         text = _extract_text(chunk)
         if text:
             yield text
+
+
+def _call_gemini_vision(image_bytes: bytes, prompt: str) -> dict:
+    """Send an image to Gemini and parse its JSON response."""
+    from PIL import Image
+
+    _ensure_configured()
+    if not settings.GENAI_API_KEY:
+        raise RuntimeError('Gemini API key is not configured.')
+    model = genai.GenerativeModel(settings.GEMINI_MODEL)
+    response = model.generate_content(
+        [prompt, Image.open(io.BytesIO(image_bytes))],
+        generation_config={'temperature': 0.3, 'max_output_tokens': 1024},
+    )
+    text = _extract_text(response).strip().removeprefix('```json').removesuffix('```').strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {'text': text, 'uneb_code': '', 'topic': ''}
+
+
+def ask_gemini_json(prompt: str) -> dict:
+    text = ask_gemini(prompt).strip().removeprefix('```json').removesuffix('```').strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning('Failed to parse JSON from Gemini: %s', text[:200])
+        return {}

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'learning',
     'analytics',
     'ai_tutor',
+    'curriculum',
 ]
 
 MIDDLEWARE = [
@@ -89,16 +90,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # ---------------------------------------------------------------------------
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='mathmaster_db'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='password'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5433'),
+DB_ENGINE = config('DB_ENGINE', default='django.db.backends.postgresql')
+if DB_ENGINE == 'django.db.backends.sqlite3':
+    DATABASES = {'default': {'ENGINE': DB_ENGINE, 'NAME': BASE_DIR / 'db.sqlite3'}}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': config('DB_NAME', default='mathmaster_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default='password'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5433'),
+        }
     }
-}
 
 # ---------------------------------------------------------------------------
 # Password validation
@@ -134,6 +139,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
+DOCUMENT_MAX_SIZE_MB = 20
+DOCUMENT_ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ---------------------------------------------------------------------------
@@ -154,6 +166,7 @@ REST_FRAMEWORK = {
         'user': config('THROTTLE_USER_RATE', default='200/min'),
         'auth': config('THROTTLE_AUTH_RATE', default='5/min'),
         'ai_tutor': '20/hour',
+        'upload': '20/hour',
         'quiz_attempt': '60/min',
     },
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
@@ -173,7 +186,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # ---------------------------------------------------------------------------
 
 GENAI_API_KEY = config('GENAI_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-1.5-flash')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-flash-latest')
 
 # ---------------------------------------------------------------------------
 # Cache (LocMemCache for dev; swap for Redis in production)

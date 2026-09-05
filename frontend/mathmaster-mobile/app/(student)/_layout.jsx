@@ -4,31 +4,18 @@ import React from 'react';
 import FloatingTabBar from '../../src/components/ui/FloatingTabBar';
 
 const TABS = [
-  { name: '(tabs)/index', label: 'Home', icon: 'home' },
-  { name: '(tabs)/topics', label: 'Topics', icon: 'book' },
-  { name: '(tabs)/ai-tutor', label: 'AI Tutor', icon: 'smart_toy' },
-  { name: '(tabs)/performance', label: 'Performance', icon: 'leaderboard' },
-  { name: '(tabs)/profile', label: 'Profile', icon: 'person' },
+  { key: 'index', name: '(tabs)/index', label: 'Home', icon: 'home' },
+  { key: 'topics', name: '(tabs)/topics', label: 'Topics', icon: 'book' },
+  { key: 'ai-tutor', name: '(tabs)/ai-tutor', label: 'AI Tutor', icon: 'smart_toy' },
+  { key: 'performance', name: '(tabs)/performance', label: 'Performance', icon: 'leaderboard' },
+  { key: 'profile', name: '(tabs)/profile', label: 'Profile', icon: 'person' },
 ];
 
 export default function StudentLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Tabs tabBar={(props) => <FloatingTabBar tabs={TABS} {...props} />} screenOptions={{ headerShown: false }}>
       {TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.label,
-            tabBarIconName: tab.icon,
-            tabBarIconIsAI: tab.isAI, 
-          }}
-        />
+        <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.label }} />
       ))}
 
       {/* Non-tab screens live in this navigator but have no tab button. */}
