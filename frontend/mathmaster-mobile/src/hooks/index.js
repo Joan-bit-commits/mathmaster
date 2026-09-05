@@ -38,6 +38,8 @@ export const useTeacherOverview = () =>
 export const useTeacherStudents = () =>
   useQuery({ queryKey: ['teacherStudents'], queryFn: () => withMinSkeleton(analytics.fetchTeacherStudents()) });
 
+export * from './useTabBarSpacing';
+
 // ---- Mutations ----
 export function useSubmitAttempt(quizId) {
   const qc = useQueryClient();
