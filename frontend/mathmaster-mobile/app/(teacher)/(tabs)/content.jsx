@@ -13,6 +13,7 @@ const ACTIONS = [
   { icon: 'menu_book', label: 'Topics', blurb: 'Browse & edit topics', route: '/(teacher)/(tabs)/curriculum' },
   { icon: 'article', label: 'Lessons', blurb: 'Manage lesson content', route: '/(teacher)/content/lesson/new' },
   { icon: 'quiz', label: 'Quizzes', blurb: 'Build & review quizzes', route: '/(teacher)/content/quiz/new' },
+  { icon: 'upload_file', label: 'Past paper → Quiz', blurb: 'Extract questions from a paper', route: '/(teacher)/content/past-paper' },
 ];
 
 const ACTIVITY = [

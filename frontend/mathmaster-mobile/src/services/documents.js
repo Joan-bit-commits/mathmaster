@@ -2,7 +2,11 @@ import { API_URL, USE_MOCK_DATA, apiUpload, del, get } from './api';
 import { useAuthStore } from '../stores/authStore';
 import { mockDocuments, mockDocument, mockChunks, mockSessions } from '../mocks/documents';
 
-export const fetchDocuments = async () => USE_MOCK_DATA ? mockDocuments : (await get('/api/documents/')).results ?? await get('/api/documents/');
+export const fetchDocuments = async () => {
+  if (USE_MOCK_DATA) return mockDocuments;
+  const data = await get('/api/documents/');
+  return data.results ?? data;
+};
 export const fetchDocument = (id) => USE_MOCK_DATA ? mockDocument(id) : get(`/api/documents/${id}/`);
 export const deleteDocument = (id) => USE_MOCK_DATA ? Promise.resolve({}) : del(`/api/documents/${id}/`);
 export const fetchDocumentChunks = (id) => USE_MOCK_DATA ? mockChunks : get(`/api/documents/${id}/chunks/`);

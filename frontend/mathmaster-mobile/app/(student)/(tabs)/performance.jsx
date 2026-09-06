@@ -13,6 +13,7 @@ import Screen from '../../../src/components/ui/Screen';
 import StatTile from '../../../src/components/ui/StatTile';
 import { usePerformance, useTopicPerformance } from '../../../src/hooks';
 import { friendlyDate } from '../../../src/lib/format';
+import CaptureFAB from '../../../src/components/ui/CaptureFAB';
 
 const PERIODS = [
   { key: '7d', label: '7 days' },
@@ -113,6 +114,7 @@ export default function PerformanceScreen() {
           </ScrollView>
         )}
       </Screen>
+      <CaptureFAB className="absolute bottom-8 right-6" onPress={() => router.push('/(student)/scan/camera')} />
     </SafeAreaView>
   );
 }

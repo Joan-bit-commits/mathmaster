@@ -1,8 +1,8 @@
 import { USE_MOCK_DATA, get } from './api';
 import { mockFetchLevels, mockFetchLevel, mockFetchObjective, mockFetchStrand, mockFetchWorkedExamples, mockFetchLocalProblems, mockFetchUNEBFormat, mockFetchTextbooks, mockSearchObjectives } from '../mocks/curriculum';
 
-const live = (fn, fallback) => USE_MOCK_DATA ? fallback : fn();
-export const fetchLevels = () => live(mockFetchLevels, get('/api/curriculum/levels/'));
+const live = (fallback, fn) => USE_MOCK_DATA ? fallback() : fn();
+export const fetchLevels = () => live(mockFetchLevels, () => get('/api/curriculum/levels/'));
 export const fetchLevel = (level) => USE_MOCK_DATA ? mockFetchLevel(level) : get(`/api/curriculum/levels/${level}/`);
 export const fetchObjective = (code) => USE_MOCK_DATA ? mockFetchObjective(code) : get(`/api/curriculum/objectives/${code}/`);
 export const fetchStrand = (level, code) => USE_MOCK_DATA ? mockFetchStrand(level, code) : get(`/api/curriculum/strands/${level}/${code}/`);

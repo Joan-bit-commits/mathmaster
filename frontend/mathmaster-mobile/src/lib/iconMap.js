@@ -105,6 +105,12 @@ const ICON_MAP = {
   'swap-horiz': 'swap-horiz',
   code: 'code',
   straighten: 'straighten',
+  photo_camera: 'photo-camera',
+  photo_library: 'photo-library',
+  flip_camera_ios: 'flip-camera-ios',
+  flash_on: 'flash-on',
+  flash_off: 'flash-off',
+  rotate_90_degrees_ccw: 'rotate-90-degrees-ccw',
 };
 
 export function mapIcon(symbolName) {

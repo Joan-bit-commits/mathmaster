@@ -19,6 +19,8 @@ import Button from "../../../src/components/ui/Button";
 import KeyboardScreen from "../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import Screen from "../../../src/components/ui/Screen";
+import ModeTabs from "../../../src/components/ui/ModeTabs";
+import CaptureFAB from "../../../src/components/ui/CaptureFAB";
 
 const QUICK_PROMPTS = [
   { icon: "functions", title: "Solve an equation", body: "e.g. 2x + 5 = 13" },
@@ -78,6 +80,7 @@ export default function AITutorNewChatScreen() {
       accessibilityLabel="AI tutor"
     >
       <Screen>
+        <ModeTabs className="mx-6 mt-2" value="Chat" onChange={(mode) => mode === 'Scan' ? router.push('/(student)/scan') : mode === 'Doc' ? router.push('/(student)/documents') : null} />
         <View className="flex-row items-center justify-between h-16 px-[24px]">
           <View className="flex-row items-center gap-2">
             <MaterialIcon name="smart_toy" size={24} color="primary" />
@@ -208,6 +211,7 @@ export default function AITutorNewChatScreen() {
           </View>
         </KeyboardScreen>
       </Screen>
+      <CaptureFAB className="absolute bottom-8 right-6" onPress={() => router.push('/(student)/scan/camera')} />
     </SafeAreaView>
   );
 }

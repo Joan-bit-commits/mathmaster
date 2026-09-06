@@ -10,6 +10,7 @@ import LoadingSkeleton from '../../../../src/components/ui/LoadingSkeleton';
 import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
 import Screen from '../../../../src/components/ui/Screen';
 import { useQuestions, useQuiz, useSubmitAttempt } from '../../../../src/hooks';
+import QuickPromptChips from '../../../../src/components/ui/QuickPromptChips';
 
 function tier(score) {
   if (score >= 90) return { label: 'Excellent', tone: 'success', emoji: '🏆' };
@@ -72,6 +73,7 @@ export default function QuizResultsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Quiz results">
       <Screen>
+        <QuickPromptChips className="mx-6 mt-3" prompts={['Try a similar problem', 'Review this objective']} onSelect={() => router.push('/(student)/curriculum')} />
         <ScrollView contentContainerClassName="px-[24px] pb-10" showsVerticalScrollIndicator={false}>
           {/* Score hero */}
           <View className="items-center py-8" accessibilityLiveRegion="polite">

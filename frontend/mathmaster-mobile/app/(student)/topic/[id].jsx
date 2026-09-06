@@ -11,6 +11,8 @@ import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import { useLessons, useTopic } from '../../../src/hooks';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CaptureFAB from '../../../src/components/ui/CaptureFAB';
+import UNEBCodeBadge from '../../../src/components/ui/UNEBCodeBadge';
 
 export default function TopicDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -39,6 +41,7 @@ export default function TopicDetailScreen() {
           <ScrollView contentContainerClassName="px-[24px] pb-28" showsVerticalScrollIndicator={false}>
             <Card variant="hero" className="mb-6">
               <Text className="font-label-sm text-label-sm text-[#89ceff] uppercase mb-2">{topic?.level} · {topic?.subject}</Text>
+              <UNEBCodeBadge code={topic?.uneb_code || `${topic?.level || 'S1'}.M.A.1`} />
               <Text className="text-[28px] leading-9 font-semibold text-white mb-2">{topic?.name}</Text>
               <Text className="font-body-md text-body-md text-[#b6c2d2] mb-4">{topic?.description}</Text>
               <View className="flex-row gap-4">
@@ -77,6 +80,7 @@ export default function TopicDetailScreen() {
           </ScrollView>
         )}
 
+        <CaptureFAB className="absolute bottom-8 right-6" onPress={() => router.push('/(student)/scan/camera')} />
         {/* Sticky bottom CTA */}
         {!isLoading && lessons?.length ? (
           <View className="absolute bottom-0 left-0 right-0 px-[24px] pb-4 pt-2 bg-gradient-to-t from-background">

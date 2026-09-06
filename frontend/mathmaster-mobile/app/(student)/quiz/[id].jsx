@@ -12,6 +12,7 @@ import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import ProgressBar from '../../../src/components/ui/ProgressBar';
 import Screen from '../../../src/components/ui/Screen';
 import { useQuestions, useQuiz } from '../../../src/hooks';
+import TopicContextCard from '../../../src/components/ui/TopicContextCard';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -85,6 +86,7 @@ export default function QuizQuestionScreen() {
         <Text className="px-[24px] pb-2 font-label-sm text-label-sm text-on-surface-variant uppercase">
           Question {index + 1} of {total || '…'}
         </Text>
+        <TopicContextCard className="mx-6 mb-4" topic={quiz?.topic_name || quiz?.title} code={quiz?.uneb_code || 'S1.M.A.1'} level={quiz?.level || 'Uganda curriculum'} textbook="Mathematics for Uganda Book 1" onPress={() => router.push({ pathname: '/(student)/curriculum/topic', params: { code: quiz?.uneb_code || 'S1.M.A.1' } })} />
 
         {isLoading ? (
           <View className="px-[24px] gap-3">

@@ -19,6 +19,7 @@ export default function TeacherLayout() {
       <Tabs.Screen name="content/lesson/new" options={{ href: null }} />
       <Tabs.Screen name="content/quiz/new" options={{ href: null }} />
       <Tabs.Screen name="content/question/new" options={{ href: null }} />
+      <Tabs.Screen name="content/past-paper" options={{ href: null }} />
     </Tabs>
   );
 }
