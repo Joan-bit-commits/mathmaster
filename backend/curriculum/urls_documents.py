@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    DocumentAskStreamView,
     DocumentAskView,
     DocumentChunkDetailView,
     DocumentChunksView,
@@ -18,6 +19,7 @@ urlpatterns = [
     path('<int:pk>/chunks/', DocumentChunksView.as_view()),
     path('<int:pk>/chunks/<int:chunk_id>/', DocumentChunkDetailView.as_view()),
     path('<int:pk>/ask/', DocumentAskView.as_view()),
+    path('<int:pk>/ask/stream/', DocumentAskStreamView.as_view()),
     path('<int:pk>/sessions/', DocumentSessionsView.as_view()),
     path('<int:pk>/sessions/<int:session_id>/', DocumentSessionDetailView.as_view()),
 ]

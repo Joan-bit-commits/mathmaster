@@ -1,3 +1,4 @@
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -16,7 +17,7 @@ from .serializers import (
     ScanJobCreateSerializer,
     ScanJobSerializer,
 )
-from .services import answer_document, process_document, solve_scanned_problem
+from .services import answer_document, process_document, solve_scanned_problem, stream_answer_document
 from .structure import (
     APPROVED_TEXTBOOKS,
     LOCAL_PROBLEMS,
@@ -144,6 +145,31 @@ class DocumentAskView(APIView):
         if record is None:
             return Response({'detail': 'No content found in this document.'}, status=400)
         return Response(DocumentQuestionSerializer(record).data)
+
+
+class DocumentAskStreamView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        document = get_object_or_404(Document, pk=pk, owner=request.user)
+        if document.processing_status != Document.ProcessingStatus.READY:
+            return Response({'detail': 'Document is not ready yet.'}, status=status.HTTP_400_BAD_REQUEST)
+        question = request.data.get('question', '').strip()
+        if not question:
+            return Response({'detail': 'Question is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        session = None
+        session_id = request.data.get('session_id')
+        if session_id:
+            session = DocumentChatSession.objects.filter(
+                id=session_id, document=document, user=request.user
+            ).first()
+        response = StreamingHttpResponse(
+            stream_answer_document(document, question, request.user, session),
+            content_type='text/event-stream',
+        )
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'
+        return response
 
 
 class DocumentSessionsView(generics.ListAPIView):

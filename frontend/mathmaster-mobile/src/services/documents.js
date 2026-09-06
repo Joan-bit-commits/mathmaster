@@ -17,8 +17,15 @@ export const deleteDocumentSession = (id, sessionId) => del(`/api/documents/${id
 export const uploadDocument = (file, metadata = {}, onProgress) => { const form = new FormData(); form.append('file', { uri: file.uri, name: file.name || 'document.pdf', type: file.mimeType || 'application/pdf' }); Object.entries(metadata).forEach(([key, value]) => form.append(key, value)); return USE_MOCK_DATA ? Promise.resolve({ ...mockDocuments[0], title: metadata.title || file.name }) : apiUpload.upload('/api/documents/', form, { onProgress }); };
 export async function askDocumentStream(documentId, question, sessionId, callbacks = {}) {
   if (USE_MOCK_DATA) { const answer = 'Start by identifying the known values, then apply the correct formula using Ugandan units.'; for (const token of answer.match(/\S+\s*/g) || []) { await new Promise((resolve) => setTimeout(resolve, 35)); callbacks.onToken?.(token); } callbacks.onCitation?.({ page: 23 }); callbacks.onDone?.({ session_id: sessionId || 'mock-session' }); return; }
-  const store = useAuthStore.getState(); const response = await fetch(`${API_URL}/api/documents/${documentId}/ask/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${store.accessToken}`, Accept: 'text/event-stream' }, body: JSON.stringify({ question, session_id: sessionId }) });
+  const store = useAuthStore.getState(); const response = await fetch(`${API_URL}/api/documents/${documentId}/ask/stream/`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${store.accessToken}`, Accept: 'text/event-stream' }, body: JSON.stringify({ question, session_id: sessionId }) });
   if (!response.ok || !response.body) throw new Error(`Document question failed: ${response.status}`);
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    callbacks.onToken?.(data.answer || '');
+    callbacks.onDone?.({ session_id: data.session, citations: data.cited_chunks || [] });
+    return data;
+  }
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
   while (true) { const { done, value } = await reader.read(); if (done) break; buffer += decoder.decode(value, { stream: true }); const frames = buffer.split('\n\n'); buffer = frames.pop() || ''; frames.forEach((frame) => frame.split('\n').filter((line) => line.startsWith('data: ')).forEach((line) => { try { const data = JSON.parse(line.slice(6)); if (data.token) callbacks.onToken?.(data.token); if (data.session_id) callbacks.onDone?.(data); if (data.citation) callbacks.onCitation?.(data.citation); } catch {} })); }
 }

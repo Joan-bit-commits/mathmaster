@@ -1,10 +1,11 @@
+import json
 import logging
 import re
 
 import pdfplumber
 from django.utils import timezone as django_timezone
 
-from utils.gemini import ask_gemini, ask_gemini_json, gemini_configured
+from utils.gemini import ask_gemini, ask_gemini_json, gemini_configured, stream_gemini
 from utils.sanitize import sanitize_text
 
 from .models import Document, DocumentChatSession, DocumentChunk, DocumentQuestion, ScanJob
@@ -103,6 +104,48 @@ def answer_document(document, question, user, session=None):
     )
     record.cited_chunks.set(chunks)
     return record, chunks
+
+
+def stream_answer_document(document, question, user, session=None):
+    if not gemini_configured():
+        yield 'event: error\ndata: {"error": "AI tutor is not configured."}\n\n'
+        return
+
+    question = sanitize_text(question)
+    chunks = retrieve_relevant_chunks(document, question)
+    if not chunks:
+        yield 'event: error\ndata: {"error": "No relevant content found in this document."}\n\n'
+        return
+
+    context = '\n\n---\n\n'.join(f'[Page {chunk.page_number or "?"}]\n{chunk.content}' for chunk in chunks)
+    prompt = (
+        f'{format_curriculum_context(level=document.detected_level or "S1")}\n\n'
+        f'DOCUMENT EXCERPTS:\n{context}\n\nSTUDENT QUESTION: {question}\n\n'
+        'Answer only from the excerpts and cite page numbers.'
+    )
+    session = session or DocumentChatSession.objects.create(
+        document=document, user=user, title=question[:50]
+    )
+    response_parts = []
+    try:
+        for token in stream_gemini(prompt):
+            response_parts.append(token)
+            yield f'data: {json.dumps({"token": token})}\n\n'
+    except Exception:
+        logger.exception('Document streaming failed')
+        yield 'event: error\ndata: {"error": "AI temporarily unavailable."}\n\n'
+        return
+
+    record = DocumentQuestion.objects.create(
+        document=document,
+        user=user,
+        question=question,
+        answer=''.join(response_parts),
+        session=session,
+    )
+    record.cited_chunks.set(chunks)
+    citations = [{'chunk_id': chunk.id, 'page': chunk.page_number} for chunk in chunks]
+    yield f'event: done\ndata: {json.dumps({"session_id": session.id, "citations": citations})}\n\n'
 
 
 def solve_scanned_problem(scan):
