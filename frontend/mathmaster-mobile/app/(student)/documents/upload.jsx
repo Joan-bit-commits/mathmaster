@@ -1,8 +1,73 @@
-import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
-import { router } from 'expo-router';
-import useDocumentUpload from '../../../src/hooks/useDocumentUpload';
-import UploadProgress from '../../../src/components/ui/UploadProgress';
-import Button from '../../../src/components/ui/Button';
-export default function DocumentUpload() { const [file, setFile] = useState(null); const [title, setTitle] = useState(''); const { uploadDocument, isUploading, progress, error } = useDocumentUpload(); const pick = async () => { const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true }); if (!result.canceled) { setFile(result.assets[0]); setTitle(result.assets[0].name.replace(/\.pdf$/i, '')); } }; const upload = async () => { const document = await uploadDocument(file, { title: title || file.name, document_type: 'notes' }); router.replace({ pathname: '/(student)/documents/[id]', params: { id: document.id } }); }; return <View className="flex-1 bg-background px-6 pt-8"><Text className="font-headline-md text-on-surface">Upload a document</Text><Text className="font-body-md mt-1 text-on-surface-variant">Choose a PDF chapter, worksheet, or your notes.</Text><Pressable onPress={pick} className="mt-8 items-center rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-10" accessibilityRole="button" accessibilityLabel="Choose PDF document"><Text className="font-title-lg text-primary">{file ? file.name : 'Choose PDF'}</Text><Text className="font-body-sm mt-2 text-on-surface-variant">PDF files up to 20 MB</Text></Pressable>{error && <Text className="font-body-sm mt-3 text-error">{error.message}</Text>}<Button className="mt-6" label="Upload document" fullWidth disabled={!file} loading={isUploading} onPress={upload} />{isUploading && <UploadProgress progress={progress} fileName={file?.name} onCancel={() => {}} />}</View>; }
+import React, { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { router } from "expo-router";
+import useDocumentUpload from "../../../src/hooks/useDocumentUpload";
+import UploadProgress from "../../../src/components/ui/UploadProgress";
+import Button from "../../../src/components/ui/Button";
+export default function DocumentUpload() {
+  const [file, setFile] = useState(null);
+  const [title, setTitle] = useState("");
+  const { uploadDocument, isUploading, progress, error } = useDocumentUpload();
+  const pick = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "application/pdf",
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled) {
+      setFile(result.assets[0]);
+      setTitle(result.assets[0].name.replace(/\.pdf$/i, ""));
+    }
+  };
+  const upload = async () => {
+    const document = await uploadDocument(file, {
+      title: title || file.name,
+      document_type: "notes",
+    });
+    router.replace({
+      pathname: "/(student)/documents/[id]",
+      params: { id: document.id },
+    });
+  };
+  return (
+    <View className="flex-1 bg-background px-6 pt-8">
+      <Text className="font-headline-md text-on-surface">
+        Upload a document
+      </Text>
+      <Text className="font-body-md mt-1 text-on-surface-variant">
+        Choose a PDF chapter, worksheet, or your notes.
+      </Text>
+      <Pressable
+        onPress={pick}
+        className="mt-8 items-center rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-lowest p-10"
+        accessibilityRole="button"
+        accessibilityLabel="Choose PDF document"
+      >
+        <Text className="font-title-lg text-primary">
+          {file ? file.name : "Choose PDF"}
+        </Text>
+        <Text className="font-body-sm mt-2 text-on-surface-variant">
+          PDF files up to 20 MB
+        </Text>
+      </Pressable>
+      {error && (
+        <Text className="font-body-sm mt-3 text-error">{error.message}</Text>
+      )}
+      <Button
+        className="mt-6"
+        label="Upload document"
+        fullWidth
+        disabled={!file}
+        loading={isUploading}
+        onPress={upload}
+      />
+      {isUploading && (
+        <UploadProgress
+          progress={progress}
+          fileName={file?.name}
+          onCancel={() => {}}
+        />
+      )}
+    </View>
+  );
+}

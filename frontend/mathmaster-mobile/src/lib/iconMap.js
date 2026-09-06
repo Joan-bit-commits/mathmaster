@@ -85,6 +85,8 @@ const ICON_MAP = {
   dark_mode: 'dark-mode',
   language: 'language',
   description: 'description',
+  document_scanner: 'document-scanner',
+  folder: 'folder',
   assignment: 'assignment',
   fact_check: 'fact-check',
   grade: 'grade',

@@ -1,3 +1,27 @@
-import { useEffect, useState } from 'react';
-import { fetchScanHistory, submitScan } from '../services/scan';
-export default function useScan() { const [isScanning, setScanning] = useState(false); const [result, setResult] = useState(null); const [error, setError] = useState(null); const [history, setHistory] = useState([]); useEffect(() => { fetchScanHistory().then(setHistory).catch(setError); }, []); const submit = async (imageUri) => { setScanning(true); setError(null); try { const item = await submitScan(imageUri); setResult(item); setHistory((items) => [item, ...items].slice(0, 20)); return item; } catch (err) { setError(err); throw err; } finally { setScanning(false); } }; return { submitScan: submit, isScanning, result, error, history }; }
+import { useEffect, useState } from "react";
+import { fetchScanHistory, submitScan } from "../services/scan";
+export default function useScan() {
+  const [isScanning, setScanning] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [history, setHistory] = useState([]);
+  useEffect(() => {
+    fetchScanHistory().then(setHistory).catch(setError);
+  }, []);
+  const submit = async (imageUri) => {
+    setScanning(true);
+    setError(null);
+    try {
+      const item = await submitScan(imageUri);
+      setResult(item);
+      setHistory((items) => [item, ...items].slice(0, 20));
+      return item;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setScanning(false);
+    }
+  };
+  return { submitScan: submit, isScanning, result, error, history };
+}

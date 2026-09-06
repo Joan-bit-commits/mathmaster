@@ -1,34 +1,63 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Pressable, StyleSheet, Platform, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import MaterialIcon from './MaterialIcon';
 
-// Luminous Mathematics palette — matches FloatingTabBar (student).
 const PRIMARY = '#006591';
 const ON_SURFACE_VARIANT = '#3e4850';
 const SURFACE = '#e5eeff';
 
-/**
- * TeacherFloatingTabBar
- *
- * Same floating bar as the student version (FloatingTabBar.jsx) but with ALL
- * five icon buttons identical — no oversized raised center button.
- *
- * Route names may arrive group-prefixed ('(tabs)/curriculum'); matching strips
- * the prefix so screens can live in a (tabs)/ folder.
- */
+// This array is now the ONLY source of truth for display order — state.routes
+// order is not reliable for this as of SDK 56's new Tabs implementation.
 const TABS = [
   { name: 'index', label: 'Home', icon: 'dashboard' },
+  { name: 'content', label: 'Content', icon: 'add-box' },
   { name: 'curriculum', label: 'Curriculum', icon: 'menu-book' },
   { name: 'students', label: 'Students', icon: 'groups' },
-  { name: 'content', label: 'Content', icon: 'add-box' },
   { name: 'profile', label: 'Profile', icon: 'person' },
 ];
 
 const bare = (name) => name.replace(/^\(tabs\)\//, '');
-const tabFor = (routeName) => TABS.find((t) => t.name === bare(routeName));
+
+function TabSlot({ meta, isFocused, onPress }) {
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withSpring(isFocused ? 1.1 : 1, { damping: 14, stiffness: 200 });
+    lift.value = withSpring(isFocused ? -2 : 0, { damping: 14, stiffness: 200 });
+  }, [isFocused]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }, { translateY: lift.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withSpring(0.9, { damping: 12, stiffness: 300 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(isFocused ? 1.1 : 1, { damping: 12, stiffness: 300 });
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={`${meta.label} tab`}
+      style={styles.slot}
+    >
+      <Animated.View style={iconStyle}>
+        <MaterialIcon name={meta.icon} size={24} color={isFocused ? 'primary' : 'on-surface-variant'} />
+      </Animated.View>
+      <Text numberOfLines={1} style={[styles.label, { color: isFocused ? PRIMARY : ON_SURFACE_VARIANT }]}>
+        {meta.label}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function TeacherFloatingTabBar({ state, navigation, insets: insetsProp }) {
   let insets = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -64,38 +93,27 @@ export default function TeacherFloatingTabBar({ state, navigation, insets: inset
     [navigation],
   );
 
-  const tabRoutes = state.routes.filter((r) => tabFor(r.name));
+  // Build the slot list by walking OUR order (TABS), looking up each
+  // matching route in state.routes — not the other way around.
+  const orderedSlots = TABS
+    .map((meta) => {
+      const route = state.routes.find((r) => bare(r.name) === meta.name);
+      return route ? { meta, route } : null;
+    })
+    .filter(Boolean);
 
   return (
     <View pointerEvents="box-none" style={[styles.wrapper, { paddingBottom: bottomPad }]}>
       <View style={styles.bar}>
-        {tabRoutes.map((route) => {
+        {orderedSlots.map(({ meta, route }) => {
           const isFocused = state.routes[state.index]?.key === route.key;
-          const meta = tabFor(route.name) || { label: route.name, icon: 'circle' };
           return (
-            <Pressable
+            <TabSlot
               key={route.key}
+              meta={meta}
+              isFocused={isFocused}
               onPress={() => handlePress(route, isFocused)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={`${meta.label} tab`}
-              style={({ pressed }) => [styles.slot, pressed && styles.tabPressed]}
-            >
-              <MaterialIcon
-                name={meta.icon}
-                size={24}
-                color={isFocused ? 'primary' : 'on-surface-variant'}
-              />
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.label,
-                  { color: isFocused ? PRIMARY : ON_SURFACE_VARIANT },
-                ]}
-              >
-                {meta.label}
-              </Text>
-            </Pressable>
+            />
           );
         })}
       </View>
@@ -140,9 +158,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
-  },
-  tabPressed: {
-    opacity: 0.6,
   },
   label: {
     fontSize: 10,

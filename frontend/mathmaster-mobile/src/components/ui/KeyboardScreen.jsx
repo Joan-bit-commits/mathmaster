@@ -4,7 +4,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 /** Standardized keyboard-avoiding wrapper. Use in place of RN's KeyboardAvoidingView. */
 export default function KeyboardScreen({ children, className = '', ...rest }) {
   return (
-    <KeyboardAvoidingView behavior="translate-with-padding" className={className} {...rest}>
+    <KeyboardAvoidingView behavior="padding" className={className} {...rest}>
       {children}
     </KeyboardAvoidingView>
   );

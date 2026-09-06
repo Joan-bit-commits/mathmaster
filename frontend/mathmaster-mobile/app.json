@@ -6,11 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#006591"
-    },
+    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ug.mathmaster.mobile",
@@ -38,6 +34,13 @@
       "eas": {
         "projectId": "1e412958-bff6-4d86-9697-a7ef90d17652"
       }
-    }
+    },
+       "plugins": [
+     ["expo-camera", {
+       "cameraPermission": "MathMaster needs camera access to scan math problems.",
+       "microphonePermission": false,
+       "recordAudioAndroid": false
+     }]
+   ]
   }
 }
