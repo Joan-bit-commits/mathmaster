@@ -2,11 +2,13 @@ import logging
 
 from django.http import StreamingHttpResponse
 from drf_spectacular.utils import extend_schema
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import AITutorRequestSerializer
+from .models import ChatSession
+from .serializers import AITutorRequestSerializer, ChatSessionDetailSerializer, ChatSessionListSerializer
 from .services import run_ask, run_ask_stream
 
 logger = logging.getLogger(__name__)
@@ -55,3 +57,19 @@ class AITutorStreamView(APIView):
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'
         return response
+
+
+class ChatSessionListView(generics.ListAPIView):
+    serializer_class = ChatSessionListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ChatSession.objects.filter(student=self.request.user).order_by('-updated_at')
+
+
+class ChatSessionDetailView(generics.RetrieveDestroyAPIView):
+    serializer_class = ChatSessionDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ChatSession.objects.filter(student=self.request.user)
