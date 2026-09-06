@@ -4,6 +4,10 @@ import { useAuthStore } from '../stores/authStore';
 export const USE_MOCK_DATA = Constants.expoConfig?.extra?.useMockData ?? true;
 export const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://127.0.0.1:8000';
 
+export function isNetworkError(err) {
+  return err?.message === 'NETWORK_ERROR' || err?.message === 'Network request failed';
+}
+
 export const api = {
   async request(path, { method = 'GET', body, auth = true, retry = true } = {}) {
     const store = useAuthStore.getState();
