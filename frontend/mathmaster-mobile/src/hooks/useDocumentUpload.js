@@ -1,0 +1,3 @@
+import { useState } from 'react';
+import { uploadDocument } from '../services/documents';
+export default function useDocumentUpload() { const [isUploading, setUploading] = useState(false); const [progress, setProgress] = useState(0); const [document, setDocument] = useState(null); const [error, setError] = useState(null); const upload = async (file, metadata) => { setUploading(true); setError(null); try { const result = await uploadDocument(file, metadata, setProgress); setDocument(result); return result; } catch (err) { setError(err); throw err; } finally { setUploading(false); } }; return { uploadDocument: upload, isUploading, progress, document, error, cancel: () => {} }; }

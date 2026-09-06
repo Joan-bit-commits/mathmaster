@@ -7,6 +7,7 @@ import Button from '../../../../src/components/ui/Button';
 import Input from '../../../../src/components/ui/Input';
 import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
 import { createLesson } from '../../../../src/services/teacher';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CreateLessonScreen() {
   const [title, setTitle] = useState('');
@@ -26,7 +27,7 @@ export default function CreateLessonScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Create lesson">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Create lesson">
       <AppBar title="New Lesson" onBack={() => router.back()} rightIcon="close" onRightIconPress={() => router.back()} />
       <ScrollView contentContainerClassName="px-[24px] pb-32" keyboardShouldPersistTaps="handled">
         <Input label="Lesson title" value={title} onChangeText={setTitle} leftIcon="article" />
@@ -51,6 +52,6 @@ export default function CreateLessonScreen() {
         <Button variant="secondary" label="Cancel" onPress={() => router.back()} accessibilityLabel="Cancel" />
         <Button label="Save lesson" loading={saving} onPress={save} fullWidth accessibilityLabel="Save lesson" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

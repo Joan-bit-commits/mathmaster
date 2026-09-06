@@ -6,18 +6,19 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#006591"
-    },
+    
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ug.mathmaster.mobile"
+      "bundleIdentifier": "ug.mathmaster.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "MathMaster needs camera access to scan math problems.",
+        "NSPhotoLibraryUsageDescription": "MathMaster needs photo library access to upload problem images."
+      }
     },
     "scheme": "mathmaster",
     "android": {
       "package": "ug.mathmaster.mobile",
+      "permissions": ["android.permission.CAMERA", "android.permission.READ_MEDIA_IMAGES"],
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -33,6 +34,13 @@
       "eas": {
         "projectId": "1e412958-bff6-4d86-9697-a7ef90d17652"
       }
-    }
+    },
+       "plugins": [
+     ["expo-camera", {
+       "cameraPermission": "MathMaster needs camera access to scan math problems.",
+       "microphonePermission": false,
+       "recordAudioAndroid": false
+     }]
+   ]
   }
 }

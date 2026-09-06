@@ -1,80 +1,79 @@
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Avatar from '../../../src/components/ui/Avatar';
-import Card from '../../../src/components/ui/Card';
+import LevelTabs from '../../../src/components/ui/LevelTabs';
 import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
-import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import Screen from '../../../src/components/ui/Screen';
-import { friendlyDate } from '../../../src/lib/format';
+import StatCard from '../../../src/components/ui/StatCard';
+import StudentRow from '../../../src/components/ui/StudentRow';
 import { useTeacherStudents } from '../../../src/hooks';
+import { useTabBarSpacing } from '../../../src/hooks/useTabBarSpacing';
 
-function Sparkline({ values, width = 60, height = 20 }) {
-  const max = Math.max(...values, 1);
-  const points = values
-    .map((v, i) => `${(i / (values.length - 1)) * width},${height - (v / max) * height}`)
-    .join(' ');
-  const Svg = require('react-native-svg').default || require('react-native-svg').Svg;
-  const Polyline = require('react-native-svg').Polyline;
-  return (
-    <Svg width={width} height={height} accessibilityLabel="7-day trend">
-      <Polyline points={points} fill="none" stroke="#006591" strokeWidth="2" />
-    </Svg>
-  );
-}
+const FILTERS = ['All', 'At risk', 'On track'];
 
 export default function StudentsRosterScreen() {
   const { data, isLoading, refetch, isRefetching } = useTeacherStudents();
+  const tabBarSpacing = useTabBarSpacing();
+  const [filter, setFilter] = useState('All');
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (filter === 'At risk') return data.filter((s) => s.average_score < 50);
+    if (filter === 'On track') return data.filter((s) => s.average_score >= 70);
+    return data;
+  }, [data, filter]);
+
+  const total = data?.length ?? 0;
+  const avgScore = total ? Math.round(data.reduce((a, s) => a + s.average_score, 0) / total) : 0;
+  const atRisk = total ? data.filter((s) => s.average_score < 50).length : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Students roster">
       <Screen>
         <View className="px-[24px] pt-4 pb-2">
-          <Text accessibilityRole="header" className="text-[24px] leading-8 font-semibold text-on-surface">Students</Text>
+          <Text accessibilityRole="header" className="text-[24px] leading-8 font-semibold text-on-surface">
+            Students
+          </Text>
+          <Text className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+            Track how your class is doing
+          </Text>
         </View>
 
-        {/* Summary tiles */}
-        <View className="flex-row gap-3 px-[24px] mb-4">
-          {[
-            { label: 'Total', value: data?.length ?? '—' },
-            { label: 'Avg score', value: data?.length ? `${Math.round(data.reduce((a, s) => a + s.average_score, 0) / data.length)}%` : '—' },
-            { label: 'At risk', value: data?.length ? data.filter((s) => s.average_score < 50).length : '—' },
-          ].map((tile) => (
-            <View key={tile.label} className="flex-1 bg-surface-container-lowest rounded-2xl p-3 border border-surface-variant/50">
-              <Text className="font-label-sm text-label-sm text-on-surface-variant uppercase">{tile.label}</Text>
-              <Text className="text-[24px] leading-8 font-bold text-on-surface">{tile.value}</Text>
-            </View>
-          ))}
+        {/* Summary */}
+        <View className="flex-row gap-3 px-[24px] mb-4 mt-2">
+          <StatCard icon="groups" label="Total" value={total || '—'} tone="primary" />
+          <StatCard icon="trending_up" label="Avg score" value={total ? `${avgScore}%` : '—'} tone="secondary" />
+          <StatCard icon="warning" label="At risk" value={total ? atRisk : '—'} tone="error" />
         </View>
+
+        <LevelTabs options={FILTERS} value={filter} onChange={setFilter} />
 
         {isLoading ? (
           <View className="px-[24px] gap-3">
-            {[...Array(5)].map((_, i) => <LoadingSkeleton key={i} variant="card" />)}
+            {[...Array(5)].map((_, i) => (
+              <LoadingSkeleton key={i} variant="card" />
+            ))}
+          </View>
+        ) : !filtered.length ? (
+          <View className="items-center justify-center px-[24px] py-16">
+            <Text className="text-[16px] leading-6 font-semibold text-on-surface mb-1">No students here</Text>
+            <Text className="font-body-sm text-body-sm text-on-surface-variant text-center">
+              No one matches this filter right now.
+            </Text>
           </View>
         ) : (
           <FlatList
-            data={data || []}
+            data={filtered}
             keyExtractor={(s) => String(s.id)}
-            contentContainerClassName="px-[24px] pb-8 gap-3"
-            refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#006591" colors={['#006591']} />}
+            contentContainerStyle={{ paddingBottom: tabBarSpacing + 24, gap: 10 }}
+            contentContainerClassName="px-[24px]"
+            refreshControl={
+              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#006591" colors={['#006591']} />
+            }
             renderItem={({ item }) => (
-              <Card onPress={() => router.push(`/(teacher)/student/${item.id}`)} accessibilityLabel={`Student ${item.name}`}>
-                <View className="flex-row items-center gap-3">
-                  <Avatar name={item.name} size="md" />
-                  <View className="flex-1">
-                    <Text className="text-[18px] leading-6 font-semibold text-on-surface">{item.name}</Text>
-                    <Text className="font-label-sm text-label-sm text-on-surface-variant">
-                      {item.level} · last active {friendlyDate(item.last_active)}
-                    </Text>
-                  </View>
-                  <Sparkline values={item.trend} />
-                  <Text className={`font-title-lg text-title-lg ${item.average_score >= 70 ? 'text-success' : item.average_score >= 50 ? 'text-[#b26a00]' : 'text-error'}`}>
-                    {item.average_score}%
-                  </Text>
-                </View>
-              </Card>
+              <StudentRow student={item} onPress={() => router.push(`/(teacher)/student/${item.id}`)} />
             )}
           />
         )}

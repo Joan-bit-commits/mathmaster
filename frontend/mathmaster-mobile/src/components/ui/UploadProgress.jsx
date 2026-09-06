@@ -1,0 +1,6 @@
+import React from 'react';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+export default function UploadProgress({ progress = 0, fileName = 'File', onCancel, visible = true }) {
+  if (!visible) return null;
+  return <View className="absolute inset-0 z-50 items-center justify-center bg-background/95 px-8" accessibilityLabel="Upload in progress"><ActivityIndicator size="large" color="#006591" /><Text className="font-title-lg mt-5 text-on-surface">Uploading {fileName}</Text><View className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-variant"><View className="h-full bg-primary" style={{ width: `${Math.round(progress * 100)}%` }} /></View><Text className="font-body-sm mt-2 text-on-surface-variant">{Math.round(progress * 100)}%</Text>{onCancel && <Pressable onPress={onCancel} className="mt-6 rounded-full border border-outline-variant px-5 py-2" accessibilityRole="button" accessibilityLabel="Cancel upload"><Text className="font-label-sm text-on-surface">Cancel</Text></Pressable>}</View>;
+}

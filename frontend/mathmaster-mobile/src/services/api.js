@@ -59,3 +59,26 @@ export const get = (path, opts) => api.request(path, { method: 'GET', ...opts })
 export const post = (path, body, opts) => api.request(path, { method: 'POST', body, ...opts });
 export const patch = (path, body, opts) => api.request(path, { method: 'PATCH', body, ...opts });
 export const del = (path, opts) => api.request(path, { method: 'DELETE', ...opts });
+
+export const apiUpload = {
+  upload(path, formData, { onProgress, method = 'POST' } = {}) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const token = useAuthStore.getState().accessToken;
+      xhr.open(method, `${API_URL}${path}`);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) onProgress(event.loaded / event.total);
+      };
+      xhr.onload = () => {
+        let payload = xhr.responseText;
+        try { payload = JSON.parse(xhr.responseText); } catch {}
+        if (xhr.status >= 200 && xhr.status < 300) resolve(payload);
+        else reject(Object.assign(new Error(`Upload failed: ${xhr.status}`), { status: xhr.status }));
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.onabort = () => reject(new Error('UPLOAD_CANCELLED'));
+      xhr.send(formData);
+    });
+  },
+};

@@ -8,6 +8,7 @@ import Chip from '../../../../src/components/ui/Chip';
 import Input from '../../../../src/components/ui/Input';
 import MaterialIcon from '../../../../src/components/ui/MaterialIcon';
 import { createQuestion } from '../../../../src/services/teacher';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const TYPES = [
   { key: 'mc', label: 'Multiple choice' },
@@ -47,7 +48,7 @@ export default function AddQuestionScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background" accessibilityLabel="Add question">
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Add question">
       <AppBar title="Add Question" onBack={() => router.back()} rightIcon="upload_file" onRightIconPress={() => {}} />
       {/* Step indicator */}
       <View className="flex-row items-center gap-2 px-[24px] pb-3">
@@ -99,6 +100,6 @@ export default function AddQuestionScreen() {
         <Button variant="secondary" label="Save & add another" loading={saving} onPress={() => save(true)} accessibilityLabel="Save and add another question" />
         <Button label="Save & finish" onPress={() => save(false)} accessibilityLabel="Save and finish" />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

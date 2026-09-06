@@ -3,6 +3,7 @@ import json
 import logging
 
 from django.core.cache import cache
+from google.api_core import exceptions as google_exceptions
 from rest_framework import serializers
 
 from analytics.signals_utils import track_event
@@ -16,6 +17,26 @@ logger = logging.getLogger(__name__)
 
 CACHE_TTL_SECONDS = 60 * 60  # 1 hour
 HISTORY_WINDOW = 6
+
+# Errors that mean "this Gemini call itself is broken/misconfigured" —
+# these should be loud (logger.critical / alerting) because they won't
+# fix themselves on retry.
+_CONFIG_ERRORS = (
+    google_exceptions.NotFound,  # e.g. bad/deprecated model name
+    google_exceptions.InvalidArgument,  # e.g. malformed request/schema
+    google_exceptions.PermissionDenied,  # e.g. bad/revoked API key
+    google_exceptions.Unauthenticated,
+)
+
+# Errors that are transient — Google's side is having a bad moment,
+# retrying later is reasonable, no need to page anyone at 3am.
+_TRANSIENT_ERRORS = (
+    google_exceptions.ResourceExhausted,  # rate limit / quota
+    google_exceptions.DeadlineExceeded,  # timeout
+    google_exceptions.ServiceUnavailable,
+    google_exceptions.InternalServerError,
+    google_exceptions.Aborted,
+)
 
 
 class AITutorRequestSerializer(serializers.Serializer):
@@ -51,8 +72,8 @@ def _persist_messages(session, question: str, answer: str):
 def _get_answer(request, data):
     """Shared logic for streaming and non-streaming views.
 
-    Returns (response_payload_iterator, status, session_id) — either the
-    cached answer string or a generator of chunks.
+    Returns (topic, level, session_id, source, cache_hit) — either the
+    cached answer string or a 1-tuple containing the prompt.
     """
     topic = sanitize_text(data['topic'])
     question = sanitize_text(data['question'])
@@ -70,35 +91,75 @@ def _get_answer(request, data):
     return topic, level, session_id, (prompt,), False
 
 
+def _error_payload(code: str, message: str):
+    return {'error': {'code': code, 'message': message}}
+
+
+def _classify_gemini_error(exc: Exception):
+    """Map a Gemini exception to (log_level, http_status, error_code, user_message).
+
+    Config errors are logged as critical (they need a human to fix the
+    model name / key / request shape) but still return a generic 503 to
+    the client — no internal exception details leak to the user.
+    """
+    if isinstance(exc, _CONFIG_ERRORS):
+        return (
+            'critical',
+            503,
+            'AI_TUTOR_MISCONFIGURED',
+            'AI tutor is temporarily unavailable. Please try again later.',
+        )
+    if isinstance(exc, _TRANSIENT_ERRORS):
+        return (
+            'warning',
+            503,
+            'AI_TUTOR_TEMPORARILY_UNAVAILABLE',
+            'AI tutor is busy right now. Please try again shortly.',
+        )
+    if isinstance(exc, RuntimeError):
+        return (
+            'error',
+            503,
+            'SERVICE_UNAVAILABLE',
+            'AI tutor is temporarily unavailable. Please try again later.',
+        )
+    # Unknown/unexpected — treat conservatively as an error worth
+    # investigating, but don't assume it's a config problem.
+    return (
+        'error',
+        503,
+        'AI_TUTOR_UNAVAILABLE',
+        'AI tutor is temporarily unavailable. Please try again later.',
+    )
+
+
+def _log_gemini_error(level: str, exc: Exception, **context):
+    log = getattr(logger, level)
+    log('Gemini request failed (%s): %s', type(exc).__name__, context, exc_info=True)
+
+
 def run_ask(request, data):
     """Non-streaming ask. Returns (payload, status_code, cache_hit)."""
     if not gemini_configured():
         return (
-            {'error': {'code': 'SERVICE_UNAVAILABLE', 'message': 'AI tutor is not configured.'}},
+            _error_payload('SERVICE_UNAVAILABLE', 'AI tutor is not configured.'),
             503,
             False,
         )
 
     topic, level, session_id, source, cache_hit = _get_answer(request, data)
     question = sanitize_text(data['question'])
+
     if cache_hit:
         answer = source
     else:
         session, history = _history_for_session(session_id, request.user)
         try:
             answer = ask_gemini(source[0], history=history)
-        except Exception:
-            logger.exception('Gemini request failed')
-            return (
-                {
-                    'error': {
-                        'code': 'SERVICE_UNAVAILABLE',
-                        'message': 'AI tutor is temporarily unavailable. Please try again later.',
-                    }
-                },
-                503,
-                False,
-            )
+        except Exception as exc:
+            level_name, status, code, message = _classify_gemini_error(exc)
+            _log_gemini_error(level_name, exc, topic=topic, session_id=session_id)
+            return _error_payload(code, message), status, False
         cache.set(_cache_key(topic, question, level), answer, CACHE_TTL_SECONDS)
 
     session, _ = _history_for_session(session_id, request.user)
@@ -123,7 +184,7 @@ def run_ask(request, data):
 def run_ask_stream(request, data):
     """Streaming ask. Yields SSE-formatted lines. Caller must return StreamingHttpResponse."""
     if not gemini_configured():
-        yield 'event: error\ndata: {"error": "AI tutor is not configured."}\n\n'
+        yield _sse_error('SERVICE_UNAVAILABLE', 'AI tutor is not configured.')
         return
 
     topic = sanitize_text(data['topic'])
@@ -149,9 +210,13 @@ def run_ask_stream(request, data):
                 yield f'data: {json.dumps({"token": token})}\n\n'
             answer = ''.join(chunks)
             cache.set(key, answer, CACHE_TTL_SECONDS)
-        except Exception:
-            logger.exception('Gemini streaming failed')
-            yield 'event: error\ndata: {"error": "AI tutor is temporarily unavailable."}\n\n'
+        except Exception as exc:
+            level_name, _status, code, message = _classify_gemini_error(exc)
+            _log_gemini_error(level_name, exc, topic=topic, session_id=session_id)
+            # If we'd already streamed some tokens before failing, don't
+            # silently discard them — the client can decide whether a
+            # partial answer is worth keeping.
+            yield _sse_error(code, message)
             return
 
     session, _ = _history_for_session(session_id, request.user)
@@ -161,6 +226,10 @@ def run_ask_stream(request, data):
     track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
 
     yield f'event: done\ndata: {json.dumps({"session_id": session.id})}\n\n'
+
+
+def _sse_error(code: str, message: str) -> str:
+    return f'event: error\ndata: {json.dumps({"error": {"code": code, "message": message}})}\n\n'
 
 
 def _chunk(text: str, size: int = 24):

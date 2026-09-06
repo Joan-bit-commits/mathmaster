@@ -11,6 +11,7 @@ import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import Screen from '../../../src/components/ui/Screen';
 import StreakGoalRing from '../../../src/components/ui/StreakGoalRing';
 import SubjectTile from '../../../src/components/ui/SubjectTile';
+import CaptureFAB from '../../../src/components/ui/CaptureFAB';
 import { useTabBarSpacing } from '../../../src/hooks/useTabBarSpacing';
 import { greeting } from '../../../src/lib/format';
 import { useAuthStore } from '../../../src/stores/authStore';
@@ -19,6 +20,7 @@ const ACTIONS = [
   { icon: 'smart_toy', label: 'Ask AI', tint: '#c9e6ff', iconColor: '#003751', route: '/(student)/(tabs)/ai-tutor' },
   { icon: 'quiz', label: 'Daily quiz', tint: '#e1e0ff', iconColor: '#07006c', route: '/(student)/(tabs)/topics' },
   { icon: 'trending_up', label: 'Progress', tint: '#ffddb8', iconColor: '#4a2c00', route: '/(student)/(tabs)/performance' },
+  { icon: 'photo_camera', label: 'Quick scan', tint: '#d5f5d5', iconColor: '#1d5c22', route: '/(student)/scan/camera' },
 ];
 
 export default function StudentHomeScreen() {
@@ -157,6 +159,7 @@ export default function StudentHomeScreen() {
           </ScrollView>
         </ScrollView>
       </Screen>
+      <CaptureFAB className="absolute bottom-8 right-6" onPress={() => router.push('/(student)/scan/camera')} />
     </SafeAreaView>
   );
 }

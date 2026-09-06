@@ -14,18 +14,19 @@ const TONES = {
 
 /** Rounded status chip. Tones: primary | secondary | tertiary | success | warning | error | neutral */
 export default function Chip({ tone = 'neutral', label, selected = false, onPress, accessibilityLabel }) {
-  const toneClass = TONES[tone] || TONES.neutral;
-  const selectedClass = selected ? 'border-[1.5px] border-primary bg-[#c9e6ff]' : '';
-  const content = (
-    <Text className={`font-label-sm text-label-sm px-3 py-1 ${TONES[selected ? 'primary' : tone]}`}>{label}</Text>
-  );
+  const activeTone = TONES[selected ? 'primary' : tone] || TONES.neutral;
+  const [bgClass, textClass] = activeTone.split(' ');
+
+  const content = <Text className={`font-label-sm text-label-sm px-3 py-1 ${textClass}`}>{label}</Text>;
+
   if (!onPress) {
     return (
-      <View className={`rounded-full self-start ${toneClass} ${selectedClass}`} accessibilityLabel={accessibilityLabel || label}>
+      <View className={`rounded-full self-start overflow-hidden ${bgClass}`} accessibilityLabel={accessibilityLabel || label}>
         {content}
       </View>
     );
   }
+
   return (
     <Pressable
       onPress={() => {
@@ -35,7 +36,7 @@ export default function Chip({ tone = 'neutral', label, selected = false, onPres
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || label}
       accessibilityState={{ selected }}
-      className={`rounded-full border border-outline-variant bg-surface-container-lowest active:opacity-80 ${selectedClass}`}
+      className={`rounded-full overflow-hidden active:opacity-80 ${bgClass} ${selected ? 'border-[1.5px] border-primary' : ''}`}
     >
       {content}
     </Pressable>
