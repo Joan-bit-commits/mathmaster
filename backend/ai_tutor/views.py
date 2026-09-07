@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models import Count
 from django.http import StreamingHttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
@@ -8,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import ChatSession
-from .serializers import AITutorRequestSerializer, ChatSessionDetailSerializer, ChatSessionListSerializer
+from .serializers import AITutorRequestSerializer, ChatSessionDetailSerializer, ChatSessionSerializer
 from .services import run_ask, run_ask_stream
 
 logger = logging.getLogger(__name__)
@@ -60,16 +61,29 @@ class AITutorStreamView(APIView):
 
 
 class ChatSessionListView(generics.ListAPIView):
-    serializer_class = ChatSessionListSerializer
+    """GET /api/ai-tutor/sessions/ — was missing entirely; the mobile
+    client's getSessions() has been calling this URL since it was written
+    and getting a 404 in any non-mock environment."""
+
     permission_classes = [IsAuthenticated]
+    serializer_class = ChatSessionSerializer
 
     def get_queryset(self):
-        return ChatSession.objects.filter(student=self.request.user).order_by('-updated_at')
+        return (
+            ChatSession.objects.filter(student=self.request.user)
+            .annotate(message_count=Count('messages'))
+            .order_by('-updated_at')
+        )
 
 
 class ChatSessionDetailView(generics.RetrieveDestroyAPIView):
-    serializer_class = ChatSessionDetailSerializer
+    """GET/DELETE /api/ai-tutor/sessions/<id>/ — full message history for one
+    session, plus the ability to delete it."""
+
     permission_classes = [IsAuthenticated]
+    serializer_class = ChatSessionDetailSerializer
 
     def get_queryset(self):
-        return ChatSession.objects.filter(student=self.request.user)
+        return ChatSession.objects.filter(student=self.request.user).annotate(
+            message_count=Count('messages')
+        )

@@ -22,7 +22,7 @@ SECRET_KEY = config('SECRET_KEY', default='dev-insecure-secret-key-change-me')
 DEBUG = config('DEBUG', default=True, cast=bool)
 LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.148', cast=Csv())
 if DEBUG:
     ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['testserver']
 
