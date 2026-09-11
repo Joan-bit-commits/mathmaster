@@ -29,7 +29,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": "http://127.0.0.1:8000",
+      "apiUrl": "http://192.168.0.148:8000",
       "useMockData": false,
       "eas": {
         "projectId": "1e412958-bff6-4d86-9697-a7ef90d17652"

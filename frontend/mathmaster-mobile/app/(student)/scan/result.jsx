@@ -11,7 +11,6 @@ import ConfidenceIndicator from "../../../src/components/ui/ConfidenceIndicator"
 import LocalContextPill from "../../../src/components/ui/LocalContextPill";
 import QuickPromptChips from "../../../src/components/ui/QuickPromptChips";
 import UploadProgress from "../../../src/components/ui/UploadProgress";
-import ErrorState from "../../../src/components/ui/ErrorState";
 
 export default function ScanResult() {
   const { id, uri, solve } = useLocalSearchParams();
@@ -63,7 +62,18 @@ export default function ScanResult() {
   }
 
   if (error || !scan) {
-    return <View className="flex-1 bg-background items-center justify-center px-8"><ErrorState description={error || "Something went wrong loading this scan."} onRetry={() => router.replace("/(student)/scan")} /><Button label="Back to scan" onPress={() => router.replace("/(student)/scan")} accessibilityLabel="Back to scan" /></View>;
+    return (
+      <View className="flex-1 bg-background items-center justify-center px-8">
+        <Text className="font-body-md text-on-surface-variant text-center mb-6">
+          {error || "Something went wrong loading this scan."}
+        </Text>
+        <Button
+          label="Back to scan"
+          onPress={() => router.replace("/(student)/scan")}
+          accessibilityLabel="Back to scan"
+        />
+      </View>
+    );
   }
 
   return (
@@ -144,7 +154,7 @@ export default function ScanResult() {
           <View className="mt-5 gap-3">
             {(scan.solution_steps || []).map((step, index) => (
               <SolutionStep
-                key={step.step}
+                key={step?.step ?? index}
                 step={step}
                 index={index}
                 onExplain={() => {}}

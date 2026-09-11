@@ -21,10 +21,7 @@ import Button from "../../../../src/components/ui/Button";
 import KeyboardScreen from "../../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../../src/components/ui/MaterialIcon";
 import Screen from "../../../../src/components/ui/Screen";
-import ErrorState from "../../../../src/components/ui/ErrorState";
-import { askAIStream, getSession } from "../../../../src/services/aiTutor";
-import { isNetworkError } from "../../../../src/services/api";
-import { useAuthStore } from "../../../../src/stores/authStore";
+import { askAIStream, fetchSession } from "../../../../src/services/aiTutor";
 
 function TypingDots() {
   const dots = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
@@ -87,65 +84,61 @@ function ChatMessage({ isUser, content }) {
 }
 
 export default function AIChatScreen() {
-  const { sessionId, initial } = useLocalSearchParams();
+  const { sessionId: routeSessionId, initial } = useLocalSearchParams();
   const [messages, setMessages] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState(
-    sessionId && /^\d+$/.test(String(sessionId)) ? Number(sessionId) : null,
-  );
-  const [topic, setTopic] = useState('Algebra');
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  const [requestError, setRequestError] = useState(null);
-  const lastQuestionRef = useRef('');
+  // The two "start a chat" entry points (new-chat composer, "Ask AI tutor"
+  // on a curriculum objective) navigate here with sessionId="new" — there's
+  // no real session yet, so sessionId stays null until the first reply
+  // comes back with one. Tapping a chat-history item instead navigates
+  // with a real numeric id, which we use to load that session's history.
+  const [sessionId, setSessionId] = useState(() => {
+    const parsed = Number(routeSessionId);
+    return Number.isFinite(parsed) ? parsed : null;
+  });
   const scrollRef = useRef(null);
 
-  const userLevel = useAuthStore((state) => state.user?.level);
-
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      if (currentSessionId) {
-        try {
-          const session = await getSession(currentSessionId);
-          if (!cancelled && session) {
-            setTopic(session.topic || userLevel || 'Algebra');
-            setMessages((session.messages || []).map((message) => ({
-              isUser: message.role === 'user',
-              content: message.content,
-            })));
-          }
-        } catch (error) {
-          if (!cancelled) setRequestError(error);
-        }
-        return;
-      }
-      const defaultTopic = userLevel || 'Algebra';
-      setTopic(defaultTopic);
-      if (initial) send(initial, defaultTopic);
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
+    const parsed = Number(routeSessionId);
+    if (Number.isFinite(parsed)) {
+      // Opened from chat history — load the existing conversation instead
+      // of starting blank. (This is the fetch that was missing entirely
+      // before: GET /api/ai-tutor/sessions/<id>/ was wired up on the
+      // backend but nothing on the client ever called it.)
+      fetchSession(parsed)
+        .then((session) => {
+          const history = (session?.messages || []).map((m) => ({
+            isUser: m.role === "user",
+            content: m.content,
+          }));
+          setMessages(history);
+        })
+        .catch(() => {
+          // Session might belong to someone else, or have been deleted —
+          // fall back to a blank conversation rather than crashing.
+          setMessages([]);
+        });
+    } else if (initial) {
+      send(initial);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSessionId]);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages, thinking]);
 
-  const send = async (text, topicOverride = topic) => {
+  const send = async (text) => {
     const q = (text ?? input).trim();
     if (!q || thinking) return;
-    lastQuestionRef.current = q;
-    setRequestError(null);
     setInput("");
     setMessages((m) => [...m, { isUser: true, content: q }]);
     setThinking(true);
     try {
       setMessages((m) => [...m, { isUser: false, content: "" }]);
-      const result = await askAIStream(
-        { topic: topicOverride, question: q, session_id: currentSessionId },
+      await askAIStream(
+        { topic: "Algebra", question: q, session_id: sessionId ?? undefined },
         {
           onToken: (token) =>
             setMessages((m) => {
@@ -154,12 +147,21 @@ export default function AIChatScreen() {
               if (last && !last.isUser) last.content += token;
               return [...copy];
             }),
+          // Capture the real session id from the first reply, and keep
+          // reusing it on every later turn so the conversation actually
+          // has continuity server-side instead of starting a fresh
+          // ChatSession on every single message.
+          onDone: (id) => setSessionId(id),
         },
       );
-      if (result?.session_id) setCurrentSessionId(result.session_id);
-    } catch (error) {
-      setMessages((m) => m[m.length - 1]?.isUser ? m : m.slice(0, -1));
-      setRequestError(error);
+    } catch {
+      setMessages((m) => [
+        ...m.slice(0, -1),
+        {
+          isUser: false,
+          content: "Sorry — I could not reach the tutor. Please try again.",
+        },
+      ]);
     } finally {
       setThinking(false);
     }
@@ -167,15 +169,6 @@ export default function AIChatScreen() {
 
   const suggestions = ["Show example", "Try similar", "Explain differently"];
   const canSend = input.trim().length > 0 && !thinking;
-  const errorDescription = requestError
-    ? isNetworkError(requestError)
-      ? "Can't reach MathMaster. Check your connection."
-      : requestError.status === 429
-        ? "You're asking too fast. Please wait a moment."
-        : requestError.status === 503
-          ? 'AI tutor temporarily unavailable. Please try again later.'
-          : requestError.message || 'The tutor could not answer right now.'
-    : null;
 
   return (
     <SafeAreaView
@@ -200,7 +193,7 @@ export default function AIChatScreen() {
               MathMaster AI
             </Text>
             <Text className="font-label-sm text-label-sm text-on-surface-variant">
-              {topic}
+              Algebra Basics
             </Text>
           </View>
           <Button
@@ -218,7 +211,6 @@ export default function AIChatScreen() {
             contentContainerClassName="px-4 py-4"
             showsVerticalScrollIndicator={false}
           >
-            {errorDescription ? <ErrorState description={errorDescription} onRetry={() => send(lastQuestionRef.current)} /> : null}
             {messages.map((m, i) => (
               <ChatMessage key={i} isUser={m.isUser} content={m.content} />
             ))}

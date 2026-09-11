@@ -41,8 +41,8 @@ class DocumentSerializer(serializers.ModelSerializer):
             'extracted_text',
             'detected_level',
             'detected_subject',
+            'used_vision_ocr',
         )
-
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
     class Meta:

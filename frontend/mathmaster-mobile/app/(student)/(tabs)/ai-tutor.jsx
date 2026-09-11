@@ -90,7 +90,7 @@ function ChatPanel() {
     setMessage("");
     setInputHeight(MIN_INPUT_HEIGHT);
     router.push({
-      pathname: "/(student)/ai-tutor/chat/1",
+      pathname: "/(student)/ai-tutor/chat/new",
       params: { initial: q },
     });
   };

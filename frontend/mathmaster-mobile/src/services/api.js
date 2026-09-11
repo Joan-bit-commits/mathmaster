@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { useAuthStore } from '../stores/authStore';
 
 export const USE_MOCK_DATA = Constants.expoConfig?.extra?.useMockData ?? true;
-export const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://127.0.0.1:8000';
+export const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://192.168.0.148:8000';
 
 export function isNetworkError(err) {
   return err?.message === 'NETWORK_ERROR' || err?.message === 'Network request failed';

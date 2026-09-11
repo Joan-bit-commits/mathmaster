@@ -5,6 +5,7 @@ from .models import Attempt, Lesson, Question, Quiz, Topic
 
 class TopicSerializer(serializers.ModelSerializer):
     lesson_count = serializers.IntegerField(source='lessons.count', read_only=True)
+    progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
@@ -15,11 +16,41 @@ class TopicSerializer(serializers.ModelSerializer):
             'level',
             'subject',
             'lesson_count',
+            'progress',
             'created_by',
             'created_at',
             'updated_at',
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+    def get_progress(self, obj):
+        """Percentage of this topic's lessons the requesting student has
+        completed, derived from LearningEvent('lesson_complete') rows.
+
+        The mobile app already reads `topic.progress` (topics.jsx, and the
+        student dashboard) — it just had nothing real to read, since this
+        field never existed here. Returns None for unauthenticated/non-
+        student requests (progress is meaningless for a teacher browsing
+        the catalog), so the client's `topic.progress || 0` fallback still
+        does the right thing in that case.
+        """
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'student':
+            return None
+
+        total_lessons = obj.lessons.count()
+        if not total_lessons:
+            return 0
+
+        from analytics.models import LearningEvent
+
+        completed = (
+            LearningEvent.objects.filter(student=request.user, event_type='lesson_complete', lesson__topic=obj)
+            .values('lesson_id')
+            .distinct()
+            .count()
+        )
+        return round(min(completed, total_lessons) / total_lessons * 100)
 
 
 class LessonSerializer(serializers.ModelSerializer):

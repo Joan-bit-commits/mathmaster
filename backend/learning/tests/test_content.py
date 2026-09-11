@@ -29,6 +29,44 @@ class TestTopicCRUDAndPermissions:
         assert resp.data['count'] == 1
         assert resp.data['results'][0]['name'] == 'Trig'
 
+    def test_topic_progress_is_none_for_teachers(self, teacher_client):
+        topic = _make_topic()
+        resp = teacher_client.get('/api/learning/topics/')
+        row = next(r for r in resp.data['results'] if r['id'] == topic.id)
+        assert row['progress'] is None
+
+    def test_topic_progress_is_zero_with_no_activity(self, student_client):
+        topic = _make_topic()
+        resp = student_client.get('/api/learning/topics/')
+        row = next(r for r in resp.data['results'] if r['id'] == topic.id)
+        assert row['progress'] == 0
+
+    def test_topic_progress_reflects_completed_lessons(self, student_client, student):
+        from analytics.models import LearningEvent
+
+        topic = _make_topic()
+        lesson1 = Lesson.objects.create(topic=topic, title='L1', content='...')
+        Lesson.objects.create(topic=topic, title='L2', content='...')
+        LearningEvent.objects.create(student=student, event_type='lesson_complete', topic=topic, lesson=lesson1)
+
+        resp = student_client.get('/api/learning/topics/')
+        row = next(r for r in resp.data['results'] if r['id'] == topic.id)
+        assert row['progress'] == 50
+
+    def test_topic_progress_does_not_double_count_repeat_completions(self, student_client, student):
+        from analytics.models import LearningEvent
+
+        topic = _make_topic()
+        lesson1 = Lesson.objects.create(topic=topic, title='L1', content='...')
+        Lesson.objects.create(topic=topic, title='L2', content='...')
+        # Completing the same lesson twice shouldn't push progress past 50%.
+        LearningEvent.objects.create(student=student, event_type='lesson_complete', topic=topic, lesson=lesson1)
+        LearningEvent.objects.create(student=student, event_type='lesson_complete', topic=topic, lesson=lesson1)
+
+        resp = student_client.get('/api/learning/topics/')
+        row = next(r for r in resp.data['results'] if r['id'] == topic.id)
+        assert row['progress'] == 50
+
     def test_student_cannot_create_topic(self, student_client):
         resp = student_client.post(
             '/api/learning/topics/',

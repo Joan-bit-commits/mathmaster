@@ -6,6 +6,7 @@ import MaterialIcon from './MaterialIcon';
 const TINTS = {
   primary: { bg: '#c9e6ff', fg: '#003751' },
   secondary: { bg: '#e1e0ff', fg: '#07006c' },
+  tertiary: { bg: '#ffddb8', fg: '#4a2c00' },
   error: { bg: '#ffdad6', fg: '#93000a' },
 };
 

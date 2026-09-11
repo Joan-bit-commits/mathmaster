@@ -5,8 +5,11 @@ from django.http import StreamingHttpResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from utils.renderers import ServerSentEventRenderer
 
 from .models import ChatSession
 from .serializers import AITutorRequestSerializer, ChatSessionDetailSerializer, ChatSessionSerializer
@@ -40,6 +43,10 @@ class AITutorStreamView(APIView):
 
     permission_classes = [IsAuthenticated]
     throttle_scope = 'ai_tutor'
+    # See utils/renderers.py — without this, DRF's content negotiation
+    # 406s the request before post() runs, because the client's
+    # Accept: text/event-stream doesn't match either default renderer.
+    renderer_classes = [ServerSentEventRenderer, JSONRenderer]
 
     @extend_schema(
         request=AITutorRequestSerializer,

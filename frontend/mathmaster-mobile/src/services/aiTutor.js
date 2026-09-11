@@ -1,5 +1,5 @@
 // AI tutor service: non-streaming ask, SSE streaming, session history.
-import { API_URL, USE_MOCK_DATA, del, get, post } from './api';
+import { API_URL, USE_MOCK_DATA, get, post } from './api';
 import { useAuthStore } from '../stores/authStore';
 import { mockAISessions, mockAskAI } from '../mocks/aiTutor';
 
@@ -13,7 +13,7 @@ export async function askAI(payload) {
  * onToken per chunk; resolves with the full answer. Falls back to the
  * non-streaming endpoint if the platform lacks ReadableStream.
  */
-export async function askAIStream(payload, { onToken, onError } = {}) {
+export async function askAIStream(payload, { onToken, onDone } = {}) {
   if (USE_MOCK_DATA) {
     const answer = await mockAskAI(payload);
     const tokens = answer.answer.match(/\S+\s*/g) || [answer.answer];
@@ -22,6 +22,7 @@ export async function askAIStream(payload, { onToken, onError } = {}) {
       await new Promise((r) => setTimeout(r, 40));
       onToken?.(t);
     }
+    onDone?.(payload.session_id || answer.session_id || 'mock-session');
     return answer;
   }
 
@@ -52,30 +53,23 @@ export async function askAIStream(payload, { onToken, onError } = {}) {
     const lines = buffer.split('\n\n');
     buffer = lines.pop() || '';
     for (const line of lines) {
-      let eventName = null;
-      let dataLine = null;
       for (const part of line.split('\n')) {
-        if (part.startsWith('event: ')) eventName = part.slice(7).trim();
-        if (part.startsWith('data: ')) dataLine = part.slice(6);
+        if (part.startsWith('data: ')) {
+          try {
+            const payloadData = JSON.parse(part.slice(6));
+            if (payloadData.token) {
+              full += payloadData.token;
+              onToken?.(payloadData.token);
+            }
+            if (payloadData.session_id) {
+              sessionId = payloadData.session_id;
+              onDone?.(sessionId);
+            }
+          } catch {
+            // ignore malformed frames
+          }
+        }
       }
-      if (!dataLine) continue;
-      let payloadData;
-      try {
-        payloadData = JSON.parse(dataLine);
-      } catch {
-        continue;
-      }
-      if (eventName === 'error' || payloadData.error) {
-        const error = new Error(payloadData.error?.message || payloadData.error || 'AI stream error');
-        error.status = payloadData.error?.status;
-        onError?.(error);
-        throw error;
-      }
-      if (payloadData.token) {
-        full += payloadData.token;
-        onToken?.(payloadData.token);
-      }
-      if (payloadData.session_id) sessionId = payloadData.session_id;
     }
   }
   return { answer: full, session_id: sessionId };
@@ -88,12 +82,10 @@ export async function getSessions() {
   return data.results ?? data;
 }
 
-export async function getSession(id) {
-  if (USE_MOCK_DATA) return mockAISessions.find((session) => String(session.id) === String(id));
+export async function fetchSession(id) {
+  if (USE_MOCK_DATA) {
+    const found = mockAISessions.find((s) => String(s.id) === String(id));
+    return found ? { ...found, messages: [] } : null;
+  }
   return get(`/api/ai-tutor/sessions/${id}/`);
-}
-
-export async function deleteSession(id) {
-  if (USE_MOCK_DATA) return { ok: true };
-  return del(`/api/ai-tutor/sessions/${id}/`);
 }

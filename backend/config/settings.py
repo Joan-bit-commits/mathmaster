@@ -186,7 +186,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # ---------------------------------------------------------------------------
 
 GENAI_API_KEY = config('GENAI_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-flash-latest')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.6-flash')
 
 # ---------------------------------------------------------------------------
 # Cache (LocMemCache for dev; swap for Redis in production)

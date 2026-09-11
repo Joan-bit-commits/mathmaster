@@ -15,7 +15,7 @@ export const useTopics = (filters) =>
 export const useTopic = (id) =>
   useQuery({ queryKey: ['topic', id], queryFn: () => withMinSkeleton(learning.fetchTopic(id)) });
 export const useLessons = (topicId) =>
-  useQuery({ queryKey: ['lessons', topicId], queryFn: () => withMinSkeleton(learning.fetchLessons(topicId)) });
+  useQuery({ queryKey: ['lessons', topicId], queryFn: () => withMinSkeleton(learning.fetchLessons(topicId)), enabled: !!topicId });
 export const useLesson = (id) =>
   useQuery({ queryKey: ['lesson', id], queryFn: () => withMinSkeleton(learning.fetchLesson(id)) });
 export const useQuizzes = (lessonId) =>
