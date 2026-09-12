@@ -9,6 +9,7 @@ class ChatSession(models.Model):
         related_name='chat_sessions',
     )
     topic = models.CharField(max_length=200, blank=True, default='')
+    title = models.CharField(max_length=200, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

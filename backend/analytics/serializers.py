@@ -59,6 +59,7 @@ class TeacherOverviewSerializer(serializers.Serializer):
     active_30d = serializers.IntegerField()
     top_struggling_topics = serializers.ListField()
     score_distribution = serializers.DictField()
+    coverage = serializers.DictField()
 
 
 class DailyStreakSerializer(serializers.ModelSerializer):

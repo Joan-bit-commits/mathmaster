@@ -1,7 +1,5 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -27,8 +25,21 @@ def _set_created_by(serializer, request):
     serializer.save(created_by=request.user)
 
 
-@method_decorator(cache_page(60 * 5, key_prefix='topics:list'), name='get')
 class TopicListCreateView(generics.ListCreateAPIView):
+    """Note: this view used to be wrapped in `cache_page(60 * 5, ...)`.
+    That cached the response by URL only, with no Vary on the
+    Authorization header this app actually authenticates with (JWT, not
+    cookies) — so every user hitting the same URL within the cache window
+    got back the exact same cached body. That was harmless while every
+    field was identical for all users (name, description, lesson_count),
+    but TopicSerializer.progress is per-student, so the same cache would
+    leak one student's completion progress to a different student (or a
+    teacher) for up to 5 minutes. Removed rather than patched with a
+    per-user cache key, since the freshness requirement (progress should
+    update as soon as a lesson is completed) doesn't suit a multi-minute
+    cache anyway.
+    """
+
     serializer_class = TopicSerializer
     permission_classes = [IsTeacherOrAdmin]
 

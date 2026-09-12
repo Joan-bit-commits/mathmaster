@@ -22,7 +22,7 @@ SECRET_KEY = config('SECRET_KEY', default='dev-insecure-secret-key-change-me')
 DEBUG = config('DEBUG', default=True, cast=bool)
 LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.148', cast=Csv())
 if DEBUG:
     ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['testserver']
 
@@ -100,7 +100,7 @@ else:
             'NAME': config('DB_NAME', default='mathmaster_db'),
             'USER': config('DB_USER', default='postgres'),
             'PASSWORD': config('DB_PASSWORD', default='password'),
-            'HOST': config('DB_HOST', default='localhost'),
+            'HOST': config('DB_HOST', default='postgres'),
             'PORT': config('DB_PORT', default='5433'),
         }
     }
@@ -186,7 +186,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # ---------------------------------------------------------------------------
 
 GENAI_API_KEY = config('GENAI_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-flash-latest')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.6-flash')
 
 # ---------------------------------------------------------------------------
 # Cache (LocMemCache for dev; swap for Redis in production)
@@ -198,6 +198,35 @@ CACHES = {
         'LOCATION': 'mathmaster-default',
     }
 }
+
+# ---------------------------------------------------------------------------
+# Celery (background tasks — document/past-paper processing)
+# ---------------------------------------------------------------------------
+#
+# Redis was already provisioned in docker-compose.yml but wasn't wired to
+# anything. Document/past-paper processing (PDF -> Vision OCR -> chunking)
+# runs synchronously inside the upload request today, which is fine for a
+# short paper but makes a longer document's upload noticeably slow, all
+# while holding an HTTP connection open the whole time.
+#
+# CELERY_TASK_ALWAYS_EAGER defaults to True: `.delay()` runs the task
+# synchronously in-process, right where it's called — i.e. IDENTICAL
+# behavior to today, with zero new setup required for `manage.py
+# runserver` alone. Set CELERY_TASK_ALWAYS_EAGER=false (and run
+# `celery -A config worker -l info` alongside the server — docker-compose
+# now does this automatically via the `worker` service) to actually get
+# background processing: uploads then return immediately with
+# processing_status="pending", and the client polls until it's "ready" or
+# "failed".
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=True, cast=bool)
+CELERY_TASK_EAGER_PROPAGATES = True  # surface task exceptions immediately in eager mode instead of swallowing them
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
 
 # ---------------------------------------------------------------------------
 # Security (production-only settings are guarded by DEBUG=False)

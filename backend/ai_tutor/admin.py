@@ -10,8 +10,11 @@ class ChatMessageInline(admin.TabularInline):
 
 @admin.register(ChatSession)
 class ChatSessionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'student', 'topic', 'created_at', 'updated_at')
-    search_fields = ('student__username', 'topic')
+    list_display = ('id', 'student', 'topic', 'title', 'created_at', 'updated_at')
+    list_filter = ('topic', 'created_at')
+    search_fields = ('student__username', 'title', 'topic')
+    readonly_fields = ('created_at', 'updated_at')
+    autocomplete_fields = ('student',)
     inlines = [ChatMessageInline]
 
 

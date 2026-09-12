@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { FlatList, RefreshControl, Text, View, Pressable } from 'react-native';
+import { Alert, FlatList, RefreshControl, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,17 @@ export default function AIChatHistoryScreen() {
       return getSessions();
     },
   });
+
+  const removeSession = (session) => {
+    Alert.alert('Delete conversation?', 'This permanently removes the chat history.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        const { deleteSession } = await import('../../../src/services/aiTutor');
+        await deleteSession(session.id);
+        refetch();
+      } },
+    ]);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="AI tutor history">
@@ -81,12 +92,16 @@ export default function AIChatHistoryScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-[16px] leading-6 font-semibold text-on-surface" numberOfLines={1}>
-                        {item.title}
+                        {item.title || item.last_message_preview || 'Math question'}
                       </Text>
                       <Text className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">
-                        {friendlyDate(item.updated_at)} · {item.topic}
+                        {item.message_count || 0} messages · {friendlyDate(item.updated_at)} · {item.topic || 'Algebra'}
                       </Text>
+                      {item.last_message_preview ? <Text className="font-body-sm mt-1 text-on-surface-variant" numberOfLines={1}>{item.last_message_preview}</Text> : null}
                     </View>
+                    <Button variant="icon" onPress={() => removeSession(item)} accessibilityLabel={`Delete ${item.title || 'conversation'}`}>
+                      <MaterialIcon name="delete" size={20} color="error" />
+                    </Button>
                     <MaterialIcon name="chevron_right" size={20} color="on-surface-variant" />
                   </View>
                 </Pressable>

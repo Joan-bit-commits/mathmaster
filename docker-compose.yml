@@ -5,7 +5,7 @@ services:
     environment:
       SECRET_KEY: dev-secret-key-change-me
       DEBUG: 'true'
-      ALLOWED_HOSTS: localhost,127.0.0.1,api
+      ALLOWED_HOSTS: localhost,127.0.0.1,api,192.168.0.148
       DB_HOST: postgres
       DB_PORT: '5432'
       DB_NAME: mathmaster_db
@@ -13,11 +13,43 @@ services:
       DB_PASSWORD: password
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       LOG_LEVEL: INFO
+      REDIS_URL: redis://redis:6379/0
+      # A worker is running as part of this compose stack (see the
+      # `worker` service below), so it's safe to actually background
+      # document/past-paper processing here rather than defaulting to the
+      # in-request eager fallback (see config/settings.py) — that default
+      # exists for `manage.py runserver` used alone, without a worker.
+      CELERY_TASK_ALWAYS_EAGER: 'false'
     ports:
       - '8000:8000'
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build: ./backend
+    command: celery -A config worker -l info
+    environment:
+      SECRET_KEY: dev-secret-key-change-me
+      DEBUG: 'true'
+      ALLOWED_HOSTS: localhost,127.0.0.1,api
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_NAME: mathmaster_db
+      DB_USER: postgres
+      DB_PASSWORD: password
+      LOG_LEVEL: INFO
+      REDIS_URL: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./backend:/app
 

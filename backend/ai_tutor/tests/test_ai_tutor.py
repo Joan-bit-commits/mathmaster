@@ -25,6 +25,42 @@ def gemini_mock():
 
 
 @pytest.mark.django_db
+class TestChatSessions:
+    """Fix 2: GET /api/ai-tutor/sessions/ used to 404 — the route didn't
+    exist at all, even though the mobile client's getSessions() called it."""
+
+    def test_requires_auth(self, anon_client):
+        resp = anon_client.get('/api/ai-tutor/sessions/')
+        assert resp.status_code == 401
+
+    def test_lists_only_the_current_users_sessions(self, student_client, student, teacher):
+        mine = ChatSession.objects.create(student=student, topic='Algebra')
+        ChatMessage.objects.create(session=mine, role='user', content='What is 2x=8?')
+        ChatMessage.objects.create(session=mine, role='assistant', content='x = 4')
+        ChatSession.objects.create(student=teacher, topic='Geometry')
+
+        resp = student_client.get('/api/ai-tutor/sessions/')
+        assert resp.status_code == 200
+        results = resp.data['results']
+        ids = [item['id'] for item in results]
+        assert ids == [mine.id]
+        assert results[0]['message_count'] == 2
+        assert results[0]['title'] == 'What is 2x=8?'
+
+    def test_detail_view_includes_messages_and_is_scoped_to_owner(self, student_client, student, teacher):
+        mine = ChatSession.objects.create(student=student, topic='Algebra')
+        ChatMessage.objects.create(session=mine, role='user', content='Hi')
+        others = ChatSession.objects.create(student=teacher, topic='Geometry')
+
+        resp = student_client.get(f'/api/ai-tutor/sessions/{mine.id}/')
+        assert resp.status_code == 200
+        assert len(resp.data['messages']) == 1
+
+        resp = student_client.get(f'/api/ai-tutor/sessions/{others.id}/')
+        assert resp.status_code == 404
+
+
+@pytest.mark.django_db
 class TestAITutorAsk:
     def _ask(self, client, **overrides):
         payload = {'topic': 'Algebra', 'question': 'What is 2+2?'}
@@ -85,6 +121,25 @@ class TestAITutorAsk:
 
 @pytest.mark.django_db
 class TestAITutorStream:
+    def test_rejects_without_406_when_client_sends_sse_accept_header(self, student_client):
+        """Regression guard: DRF's content negotiation 406s a streaming view
+        up front if the view's renderer_classes don't declare
+        text/event-stream — before the fix, this exact request (Accept
+        header included, matching what the mobile client actually sends)
+        returned 406 Not Acceptable instead of reaching post() at all."""
+        with (
+            mock.patch('ai_tutor.services.stream_gemini', return_value=iter(['ok'])),
+            mock.patch('ai_tutor.services.gemini_configured', return_value=True),
+        ):
+            resp = student_client.post(
+                '/api/ai-tutor/ask-ai-tutor/stream/',
+                {'topic': 'Algebra', 'question': 'What is 2+2?'},
+                format='json',
+                HTTP_ACCEPT='text/event-stream',
+            )
+            resp.streaming_content and b''.join(resp.streaming_content)
+        assert resp.status_code != 406
+
     def test_stream_sse_events(self, student_client):
         with (
             mock.patch('ai_tutor.services.stream_gemini') as sg,
@@ -98,6 +153,7 @@ class TestAITutorStream:
                     'question': 'What is 2+2?',
                 },
                 format='json',
+                HTTP_ACCEPT='text/event-stream',
             )
             assert resp.status_code == 200
             assert resp['Content-Type'] == 'text/event-stream'
@@ -118,6 +174,7 @@ class TestAITutorStream:
                     'question': 'Q?',
                 },
                 format='json',
+                HTTP_ACCEPT='text/event-stream',
             )
             body = b''.join(resp.streaming_content).decode()
         assert resp.status_code == 200  # SSE errors are in-band
@@ -135,7 +192,52 @@ class TestAITutorStream:
                     'question': 'Q?',
                 },
                 format='json',
+                HTTP_ACCEPT='text/event-stream',
             )
             body = b''.join(resp.streaming_content).decode()
         assert ChatMessage.objects.filter(role='assistant', content='answer text').exists()
         assert 'session_id' in body
+
+    def test_second_message_with_returned_session_id_continues_the_same_session(self, student_client, student):
+        """The mobile chat screen sends no session_id on the first message,
+        captures the session_id the server hands back in the `event: done`
+        frame, then must send that same session_id on every later message —
+        this is the exact round trip the client-side fix depends on."""
+        import json
+
+        with (
+            mock.patch('ai_tutor.services.stream_gemini', return_value=iter(['4'])),
+            mock.patch('ai_tutor.services.gemini_configured', return_value=True),
+        ):
+            first = student_client.post(
+                '/api/ai-tutor/ask-ai-tutor/stream/',
+                {'topic': 'Algebra', 'question': 'What is 2+2?'},
+                format='json',
+                HTTP_ACCEPT='text/event-stream',
+            )
+            first_body = b''.join(first.streaming_content).decode()
+
+        done_line = next(line for line in first_body.split('\n\n') if line.startswith('event: done'))
+        session_id = json.loads(done_line.split('data: ', 1)[1])['session_id']
+
+        with (
+            mock.patch('ai_tutor.services.stream_gemini', return_value=iter(['because it doubles'])),
+            mock.patch('ai_tutor.services.gemini_configured', return_value=True),
+        ):
+            second = student_client.post(
+                '/api/ai-tutor/ask-ai-tutor/stream/',
+                {'topic': 'Algebra', 'question': 'Why?', 'session_id': session_id},
+                format='json',
+                HTTP_ACCEPT='text/event-stream',
+            )
+            b''.join(second.streaming_content)
+
+        assert ChatSession.objects.filter(student=student).count() == 1
+        session = ChatSession.objects.get(student=student)
+        assert session.id == session_id
+        assert list(session.messages.values_list('content', flat=True)) == [
+            'What is 2+2?',
+            '4',
+            'Why?',
+            'because it doubles',
+        ]

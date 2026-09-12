@@ -154,7 +154,7 @@ export default function ScanResult() {
           <View className="mt-5 gap-3">
             {(scan.solution_steps || []).map((step, index) => (
               <SolutionStep
-                key={step.step}
+                key={step?.step ?? index}
                 step={step}
                 index={index}
                 onExplain={() => {}}

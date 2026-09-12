@@ -21,7 +21,7 @@ import Button from "../../../../src/components/ui/Button";
 import KeyboardScreen from "../../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../../src/components/ui/MaterialIcon";
 import Screen from "../../../../src/components/ui/Screen";
-import { askAIStream } from "../../../../src/services/aiTutor";
+import { askAIStream, fetchSession } from "../../../../src/services/aiTutor";
 
 function TypingDots() {
   const dots = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
@@ -84,14 +84,42 @@ function ChatMessage({ isUser, content }) {
 }
 
 export default function AIChatScreen() {
-  const { sessionId, initial } = useLocalSearchParams();
+  const { sessionId: routeSessionId, initial } = useLocalSearchParams();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  // The two "start a chat" entry points (new-chat composer, "Ask AI tutor"
+  // on a curriculum objective) navigate here with sessionId="new" — there's
+  // no real session yet, so sessionId stays null until the first reply
+  // comes back with one. Tapping a chat-history item instead navigates
+  // with a real numeric id, which we use to load that session's history.
+  const [sessionId, setSessionId] = useState(() => {
+    const parsed = Number(routeSessionId);
+    return Number.isFinite(parsed) ? parsed : null;
+  });
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (initial) {
+    const parsed = Number(routeSessionId);
+    if (Number.isFinite(parsed)) {
+      // Opened from chat history — load the existing conversation instead
+      // of starting blank. (This is the fetch that was missing entirely
+      // before: GET /api/ai-tutor/sessions/<id>/ was wired up on the
+      // backend but nothing on the client ever called it.)
+      fetchSession(parsed)
+        .then((session) => {
+          const history = (session?.messages || []).map((m) => ({
+            isUser: m.role === "user",
+            content: m.content,
+          }));
+          setMessages(history);
+        })
+        .catch(() => {
+          // Session might belong to someone else, or have been deleted —
+          // fall back to a blank conversation rather than crashing.
+          setMessages([]);
+        });
+    } else if (initial) {
       send(initial);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,7 +138,7 @@ export default function AIChatScreen() {
     try {
       setMessages((m) => [...m, { isUser: false, content: "" }]);
       await askAIStream(
-        { topic: "Algebra", question: q },
+        { topic: "Algebra", question: q, session_id: sessionId ?? undefined },
         {
           onToken: (token) =>
             setMessages((m) => {
@@ -119,6 +147,11 @@ export default function AIChatScreen() {
               if (last && !last.isUser) last.content += token;
               return [...copy];
             }),
+          // Capture the real session id from the first reply, and keep
+          // reusing it on every later turn so the conversation actually
+          // has continuity server-side instead of starting a fresh
+          // ChatSession on every single message.
+          onDone: (id) => setSessionId(id),
         },
       );
     } catch {

@@ -7,11 +7,12 @@ import ActionPill from '../../../src/components/ui/ActionPill';
 import Avatar from '../../../src/components/ui/Avatar';
 import Card from '../../../src/components/ui/Card';
 import LearningPathCard from '../../../src/components/ui/LearningPathCard';
+import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import Screen from '../../../src/components/ui/Screen';
-import StreakGoalRing from '../../../src/components/ui/StreakGoalRing';
 import SubjectTile from '../../../src/components/ui/SubjectTile';
 import CaptureFAB from '../../../src/components/ui/CaptureFAB';
+import { usePerformance, useRecommendations, useTopicPerformance, useTopics } from '../../../src/hooks';
 import { useTabBarSpacing } from '../../../src/hooks/useTabBarSpacing';
 import { greeting } from '../../../src/lib/format';
 import { useAuthStore } from '../../../src/stores/authStore';
@@ -23,21 +24,56 @@ const ACTIONS = [
   { icon: 'photo_camera', label: 'Quick scan', tint: '#d5f5d5', iconColor: '#1d5c22', route: '/(student)/scan/camera' },
 ];
 
+// Score -> mastery label for the hero pill. Thresholds match how
+// performance.jsx and analytics.js already bucket scores elsewhere in the
+// app, so "Intermediate" here means the same thing it means on the
+// Performance tab.
+function masteryTier(score) {
+  if (score >= 80) return 'Advanced';
+  if (score >= 50) return 'Intermediate';
+  return 'Beginner';
+}
+
 export default function StudentHomeScreen() {
   const user = useAuthStore((s) => s.user);
-  const hasUnreadNotifications = true; // TODO: wire to real notifications state
   const tabBarSpacing = useTabBarSpacing();
 
-  const featured = [
-    { id: 1, name: 'Algebra', level: 'S3', progress: 60 },
-    { id: 2, name: 'Number & Numeration', level: 'S2', progress: 100 },
-    { id: 3, name: 'Geometry & Measurement', level: 'S3', progress: 30 },
-  ];
+  // There's no notifications backend yet (no model, no endpoint — the
+  // notifications screen itself is static placeholder content too), so
+  // there's no real "unread" signal to show. Defaulting to false rather
+  // than a hardcoded `true` that always claimed something unread existed.
+  const hasUnreadNotifications = false;
 
-  const recommended = [
-    { id: 5, name: 'Statistics & Probability', reason: 'Your score dipped to 58%' },
-    { id: 6, name: 'Trigonometry', reason: 'New topic for S3' },
-  ];
+  const { data: topics, isLoading: topicsLoading } = useTopics();
+  const { data: topicPerformance } = useTopicPerformance();
+  const { data: recommendations } = useRecommendations();
+  const { data: summary } = usePerformance('all');
+
+  const featured = (topics || []).slice(0, 5);
+  const streakDays = summary?.current_streak_days ?? 0;
+
+  // Best-performing topic drives the "⭐ Topic — Tier" hero pill. Only
+  // shown once the student actually has attempts to derive it from —
+  // no fabricated subject/level for a brand new account.
+  const bestTopic = topicPerformance?.length
+    ? [...topicPerformance].sort((a, b) => b.average_score - a.average_score)[0]
+    : null;
+
+  // "Continue learning" — prefer a topic the student has started but not
+  // finished; fall back to the first not-yet-started topic; hide the
+  // section entirely if there's nothing to show rather than invent one.
+  const continueTopic =
+    featured.find((t) => (t.progress ?? 0) > 0 && (t.progress ?? 0) < 100) ||
+    featured.find((t) => (t.progress ?? 0) === 0);
+  const continueTotalSteps = Math.max(1, Math.min(continueTopic?.lesson_count || 1, 8));
+  const continueCurrentStep = Math.round(((continueTopic?.progress ?? 0) / 100) * continueTotalSteps);
+
+  const recommended = (recommendations || []).map((r) => ({
+    id: r.id,
+    topicId: r.topic,
+    name: r.topic_name,
+    reason: r.recommendation_text,
+  }));
 
   return (
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Student home dashboard">
@@ -81,30 +117,36 @@ export default function StudentHomeScreen() {
             <View className="flex-row flex-wrap gap-3 mt-4">
               <View className="bg-white/10 rounded-full px-4 py-2">
                 <Text className="font-label-sm text-label-sm text-[#89ceff]">
-                  🔥 8 day streak
+                  🔥 {streakDays} day streak
                 </Text>
               </View>
-              <View className="bg-white/10 rounded-full px-4 py-2">
-                <Text className="font-label-sm text-label-sm text-[#ffb95f]">
-                  ⭐ Algebra — Intermediate
-                </Text>
-              </View>
+              {bestTopic && (
+                <View className="bg-white/10 rounded-full px-4 py-2">
+                  <Text className="font-label-sm text-label-sm text-[#ffb95f]">
+                    ⭐ {bestTopic.topic_name} — {masteryTier(bestTopic.average_score)}
+                  </Text>
+                </View>
+              )}
             </View>
           </Card>
 
           {/* Continue learning */}
-          <View className="flex-row items-center gap-2 mb-3">
-            <View className="w-2 h-2 rounded-full bg-primary" />
-            <Text className="text-[16px] leading-6 font-semibold text-on-surface">Continue</Text>
-          </View>
-          <LearningPathCard
-            icon="functions"
-            title="Linear Equations"
-            stepLabel="Lesson 3 of 5"
-            totalSteps={5}
-            currentStep={2}
-            onPress={() => router.push('/(student)/lesson/13')}
-          />
+          {continueTopic && (
+            <>
+              <View className="flex-row items-center gap-2 mb-3">
+                <View className="w-2 h-2 rounded-full bg-primary" />
+                <Text className="text-[16px] leading-6 font-semibold text-on-surface">Continue</Text>
+              </View>
+              <LearningPathCard
+                icon="functions"
+                title={continueTopic.name}
+                stepLabel={`${continueTopic.progress ?? 0}% complete · ${continueTopic.lesson_count || 0} lessons`}
+                totalSteps={continueTotalSteps}
+                currentStep={continueCurrentStep}
+                onPress={() => router.push(`/(student)/topic/${continueTopic.id}`)}
+              />
+            </>
+          )}
 
           {/* Quick actions — horizontal pills */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4 mb-8" contentContainerClassName="pr-2">
@@ -130,33 +172,43 @@ export default function StudentHomeScreen() {
               <Text className="font-label-sm text-label-sm text-primary">See all</Text>
             </Pressable>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-3 pb-1 pr-2">
-            {featured.map((t, i) => (
-              <SubjectTile
-                key={t.id}
-                name={t.name}
-                level={t.level}
-                progress={t.progress}
-                index={i}
-                onPress={() => router.push(`/(student)/topic/${t.id}`)}
-              />
-            ))}
-          </ScrollView>
+          {topicsLoading ? (
+            <View className="flex-row gap-3">
+              {[...Array(3)].map((_, i) => <LoadingSkeleton key={i} variant="card" className="w-40 h-32" />)}
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-3 pb-1 pr-2">
+              {featured.map((t, i) => (
+                <SubjectTile
+                  key={t.id}
+                  name={t.name}
+                  level={t.level}
+                  progress={t.progress || 0}
+                  index={i}
+                  onPress={() => router.push(`/(student)/topic/${t.id}`)}
+                />
+              ))}
+            </ScrollView>
+          )}
 
           {/* Recommended */}
-          <View className="flex-row items-center gap-2 mt-8 mb-3">
-            <View className="w-2 h-2 rounded-full bg-tertiary" />
-            <Text className="text-[16px] leading-6 font-semibold text-on-surface">Recommended for you</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-3 pr-2">
-            {recommended.map((t) => (
-              <Card key={t.id} onPress={() => router.push(`/(student)/topic/${t.id}`)} className="w-64">
-                <View className="h-1 w-10 bg-tertiary-container rounded-full mb-3" />
-                <Text className="text-[18px] leading-6 font-semibold text-on-surface mb-1">{t.name}</Text>
-                <Text className="font-body-sm text-body-sm text-on-surface-variant">{t.reason}</Text>
-              </Card>
-            ))}
-          </ScrollView>
+          {recommended.length > 0 && (
+            <>
+              <View className="flex-row items-center gap-2 mt-8 mb-3">
+                <View className="w-2 h-2 rounded-full bg-tertiary" />
+                <Text className="text-[16px] leading-6 font-semibold text-on-surface">Recommended for you</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-3 pr-2">
+                {recommended.map((t) => (
+                  <Card key={t.id} onPress={() => router.push(`/(student)/topic/${t.topicId}`)} className="w-64">
+                    <View className="h-1 w-10 bg-tertiary-container rounded-full mb-3" />
+                    <Text className="text-[18px] leading-6 font-semibold text-on-surface mb-1">{t.name}</Text>
+                    <Text className="font-body-sm text-body-sm text-on-surface-variant">{t.reason}</Text>
+                  </Card>
+                ))}
+              </ScrollView>
+            </>
+          )}
         </ScrollView>
       </Screen>
       <CaptureFAB className="absolute bottom-8 right-6" onPress={() => router.push('/(student)/scan/camera')} />

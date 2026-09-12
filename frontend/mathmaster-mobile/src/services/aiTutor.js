@@ -13,7 +13,7 @@ export async function askAI(payload) {
  * onToken per chunk; resolves with the full answer. Falls back to the
  * non-streaming endpoint if the platform lacks ReadableStream.
  */
-export async function askAIStream(payload, { onToken } = {}) {
+export async function askAIStream(payload, { onToken, onDone } = {}) {
   if (USE_MOCK_DATA) {
     const answer = await mockAskAI(payload);
     const tokens = answer.answer.match(/\S+\s*/g) || [answer.answer];
@@ -22,6 +22,7 @@ export async function askAIStream(payload, { onToken } = {}) {
       await new Promise((r) => setTimeout(r, 40));
       onToken?.(t);
     }
+    onDone?.(payload.session_id || answer.session_id || 'mock-session');
     return answer;
   }
 
@@ -60,7 +61,10 @@ export async function askAIStream(payload, { onToken } = {}) {
               full += payloadData.token;
               onToken?.(payloadData.token);
             }
-            if (payloadData.session_id) sessionId = payloadData.session_id;
+            if (payloadData.session_id) {
+              sessionId = payloadData.session_id;
+              onDone?.(sessionId);
+            }
           } catch {
             // ignore malformed frames
           }
@@ -76,4 +80,12 @@ export async function getSessions() {
   // Real endpoint: derive sessions from ChatMessages via the API (see backend ai_tutor).
   const data = await get('/api/ai-tutor/sessions/');
   return data.results ?? data;
+}
+
+export async function fetchSession(id) {
+  if (USE_MOCK_DATA) {
+    const found = mockAISessions.find((s) => String(s.id) === String(id));
+    return found ? { ...found, messages: [] } : null;
+  }
+  return get(`/api/ai-tutor/sessions/${id}/`);
 }

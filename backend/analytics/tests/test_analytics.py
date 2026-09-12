@@ -154,3 +154,12 @@ class TestTeacherOverview:
         assert resp.data['active_30d'] == 1
         assert resp.data['top_struggling_topics'][0]['average_score'] == 30.0
         assert resp.data['score_distribution']['0-49'] == 1
+
+    def test_overview_coverage_reflects_real_catalog_counts(self, admin_client, curriculum):
+        """The mobile teacher dashboard's Overview stat tiles read
+        overview.coverage.{topics,lessons,quizzes} — this used to not
+        exist on the response at all, so those tiles always silently
+        showed 0 regardless of how much content existed."""
+        resp = admin_client.get('/api/analytics/teacher/overview/')
+        assert resp.status_code == 200
+        assert resp.data['coverage'] == {'topics': 1, 'lessons': 1, 'quizzes': 1}

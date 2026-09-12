@@ -4,7 +4,6 @@ import logging
 
 from django.core.cache import cache
 from google.api_core import exceptions as google_exceptions
-from rest_framework import serializers
 
 from analytics.signals_utils import track_event
 from utils.gemini import ask_gemini, gemini_configured, stream_gemini
@@ -37,14 +36,6 @@ _TRANSIENT_ERRORS = (
     google_exceptions.InternalServerError,
     google_exceptions.Aborted,
 )
-
-
-class AITutorRequestSerializer(serializers.Serializer):
-    topic = serializers.CharField(max_length=200)
-    question = serializers.CharField(max_length=2000)
-    level = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    context = serializers.CharField(max_length=4000, required=False, allow_blank=True)
-    session_id = serializers.IntegerField(required=False)
 
 
 def _cache_key(topic: str, question: str, level: str) -> str:
@@ -164,7 +155,7 @@ def run_ask(request, data):
 
     session, _ = _history_for_session(session_id, request.user)
     if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic)
+        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
     _persist_messages(session, question, answer)
     track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
 
@@ -221,7 +212,7 @@ def run_ask_stream(request, data):
 
     session, _ = _history_for_session(session_id, request.user)
     if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic)
+        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
     _persist_messages(session, question, answer)
     track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
 

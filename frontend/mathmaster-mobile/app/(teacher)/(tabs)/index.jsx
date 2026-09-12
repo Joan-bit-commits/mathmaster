@@ -24,7 +24,10 @@ const ACTIONS = [
 export default function TeacherDashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: overview } = useTeacherOverview();
-  const hasUnreadNotifications = true; // TODO: wire to real notifications state
+  // No notifications backend exists yet (no model, no endpoint) — see the
+  // matching comment on the student dashboard. Defaulting to false rather
+  // than a hardcoded `true` that always claimed something was unread.
+  const hasUnreadNotifications = false;
   const tabBarSpacing = useTabBarSpacing();
 
   return (
@@ -103,31 +106,39 @@ export default function TeacherDashboardScreen() {
             ))}
           </ScrollView>
 
-          {/* Curriculum coverage */}
+          {/* Topic performance — average quiz score per topic, weakest first.
+              (This used to be a "Curriculum coverage" section with three
+              hardcoded percentages that had no real backing data. There's
+              no syllabus-coverage metric available yet, but there is real
+              per-topic performance data already being fetched for the
+              "Needs attention" card below — reusing it here honestly beats
+              inventing numbers.) */}
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center gap-2">
               <View className="w-2 h-2 rounded-full bg-secondary" />
-              <Text className="text-[16px] leading-6 font-semibold text-on-surface">Curriculum coverage</Text>
+              <Text className="text-[16px] leading-6 font-semibold text-on-surface">Topic performance</Text>
             </View>
             <Pressable onPress={() => router.push('/(teacher)/(tabs)/curriculum')} accessibilityRole="button" accessibilityLabel="See all curriculum">
               <Text className="font-label-sm text-label-sm text-primary">See all</Text>
             </Pressable>
           </View>
-          <Card className="mb-6 p-4">
-            {[
-              { name: 'Algebra (S1–S4)', pct: 85 },
-              { name: 'Geometry (S1–S2)', pct: 70 },
-              { name: 'Trigonometry (S3–S4)', pct: 45 },
-            ].map((c) => (
-              <View key={c.name} className="mb-3 last:mb-0">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="font-body-sm text-body-sm text-on-surface">{c.name}</Text>
-                  <Text className="font-label-sm text-label-sm text-on-surface-variant">{c.pct}%</Text>
+          {(overview?.top_struggling_topics || []).length > 0 ? (
+            <Card className="mb-6 p-4">
+              {overview.top_struggling_topics.map((t) => (
+                <View key={t.topic_id} className="mb-3 last:mb-0">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="font-body-sm text-body-sm text-on-surface">{t.topic_name}</Text>
+                    <Text className="font-label-sm text-label-sm text-on-surface-variant">{Math.round(t.average_score)}% avg</Text>
+                  </View>
+                  <ProgressBar value={t.average_score} />
                 </View>
-                <ProgressBar value={c.pct} />
-              </View>
-            ))}
-          </Card>
+              ))}
+            </Card>
+          ) : (
+            <Card className="mb-6 p-4">
+              <Text className="font-body-sm text-body-sm text-on-surface-variant">No quiz attempts yet — performance data will appear here once students start taking quizzes.</Text>
+            </Card>
+          )}
 
           {/* Content gaps */}
           <View className="flex-row items-center gap-2 mb-3">

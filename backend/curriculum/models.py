@@ -29,6 +29,12 @@ class Document(models.Model):
     processing_error = models.TextField(blank=True, default='')
     detected_level = models.CharField(max_length=20, blank=True, default='')
     detected_subject = models.CharField(max_length=100, blank=True, default='')
+    used_vision_ocr = models.BooleanField(
+        default=False,
+        help_text='True if any page required Gemini Vision OCR fallback during processing '
+                   '(embedded/vector math pdfplumber could not extract as text). Lets the '
+                   'client explain why this document took longer to process.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -97,8 +103,8 @@ class ScanJob(models.Model):
     image = models.ImageField(upload_to='scans/%Y/%m/')
     status = models.CharField(max_length=20, choices=ScanStatus.choices, default=ScanStatus.PENDING)
     extracted_text = models.TextField(blank=True, default='')
-    detected_uneb_code = models.CharField(max_length=20, blank=True, default='')
-    detected_topic = models.CharField(max_length=255, blank=True, default='')
+    detected_uneb_code = models.CharField(max_length=20, blank=True, default='', null=True)
+    detected_topic = models.CharField(max_length=255, blank=True, default='', null=True)
     problem_text = models.TextField(blank=True, default='')
     solution_text = models.TextField(blank=True, default='')
     solution_steps = models.JSONField(default=list, blank=True)
