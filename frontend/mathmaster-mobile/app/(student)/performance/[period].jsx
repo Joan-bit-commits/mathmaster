@@ -30,7 +30,11 @@ export default function PerformanceDetailScreen() {
     <SafeAreaView className="flex-1 bg-background" accessibilityLabel="Performance detail">
       <Screen>
         <View className="flex-row items-center gap-3 px-[24px] h-14">
-          <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Go back">
+          <Button
+            variant="icon"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(student)'))}
+            accessibilityLabel="Go back"
+          >
             <Button.IconFallback />
           </Button>
         </View>

@@ -26,9 +26,9 @@ from .services import (
     answer_document,
     answer_document_stream,
     extract_past_paper_questions,
-    process_document,
     solve_scanned_problem,
 )
+from .tasks import process_document_task
 from .structure import (
     APPROVED_TEXTBOOKS,
     LOCAL_PROBLEMS,
@@ -137,21 +137,40 @@ class DocumentListCreateView(generics.ListCreateAPIView):
         # something explicitly hit /process/, so every upload sat at
         # `pending` forever. Trigger it here instead.
         #
-        # This runs synchronously in the request/response cycle (there's no
-        # background job queue in this codebase yet), so a large PDF or a
-        # slow Gemini OCR call will make the upload response itself slow.
-        # That's an acceptable trade-off for now to make uploads work at
-        # all; moving this to a background task is the follow-up once a
-        # task queue exists.
+        # Dispatched as a Celery task rather than called directly: with
+        # CELERY_TASK_ALWAYS_EAGER=True (the default — see
+        # config/settings.py) this still runs synchronously in-process, so
+        # nothing changes until a worker is actually running. Once one is,
+        # this stops blocking the upload response on a potentially slow
+        # multi-page Vision OCR pass.
+        #
+        # Not wrapped in transaction.on_commit(): ATOMIC_REQUESTS isn't
+        # enabled in this project, so serializer.save() above already
+        # commits the document row on its own before this line runs — a
+        # worker querying for it immediately after .delay() will find it.
+        # If ATOMIC_REQUESTS is ever turned on, or this ever moves inside
+        # an explicit atomic() block, wrap this call in
+        # transaction.on_commit() at that point to avoid a worker racing
+        # ahead of the commit.
+        #
+        # try/except mirrors the old inline-call behaviour: process_document()
+        # already records FAILED + processing_error on the document itself,
+        # so the upload should still succeed with a 201 showing that failed
+        # state rather than costing the student their upload. This also
+        # catches the (eager-mode-only) case where the task's own retry
+        # logic re-raises synchronously back through .delay() itself.
         try:
-            process_document(document)
+            process_document_task.delay(document.id)
         except Exception:
-            # process_document() already records FAILED + processing_error
-            # on the document itself before re-raising. The upload should
-            # still succeed — the student should see the (now failed)
-            # document and be able to retry via DocumentProcessView,
-            # rather than losing the whole upload over a processing error.
-            logger.exception('Automatic processing failed for document %s', document.id)
+            logger.exception('Failed to dispatch/run processing for document %s', document.id)
+        # In eager mode the task has already fully run by the time .delay()
+        # returns above, but it mutated its OWN fresh copy of this row
+        # (fetched inside the task), not this `document` object — reload
+        # so the response below reflects the real, current state instead
+        # of the stale pending values this object was created with. In
+        # real async mode this simply re-reads the still-pending row,
+        # which is the correct thing to show until a worker finishes it.
+        document.refresh_from_db()
 
 
 class DocumentDetailView(generics.RetrieveDestroyAPIView):
@@ -167,7 +186,16 @@ class DocumentProcessView(APIView):
 
     def post(self, request, pk):
         document = get_object_or_404(Document, pk=pk, owner=request.user)
-        process_document(document)
+        # Same dispatch-via-task pattern as the upload views — no
+        # transaction.on_commit() needed here since the document row
+        # already exists from a prior, already-committed request. Same
+        # try/except + refresh_from_db() reasoning too — see the comment
+        # on DocumentListCreateView.perform_create().
+        try:
+            process_document_task.delay(document.id)
+        except Exception:
+            logger.exception('Failed to dispatch/run reprocessing for document %s', document.id)
+        document.refresh_from_db()
         return Response(DocumentSerializer(document).data)
 
 
@@ -297,11 +325,15 @@ class PastPaperUploadView(DocumentListCreateView):
         # This override replaces DocumentListCreateView.perform_create()
         # entirely (it needs to set document_type), which means it was
         # never inheriting the auto-process-on-upload fix made there —
-        # past papers sat at `pending` forever, same bug, same fix.
+        # past papers sat at `pending` forever, same bug, same fix. Same
+        # Celery-task dispatch as the base class — see the comment there
+        # (including why this isn't wrapped in transaction.on_commit(),
+        # and why the try/except + refresh_from_db() below are needed).
         try:
-            process_document(document)
+            process_document_task.delay(document.id)
         except Exception:
-            logger.exception('Automatic processing failed for past paper %s', document.id)
+            logger.exception('Failed to dispatch/run processing for past paper %s', document.id)
+        document.refresh_from_db()
 
 
 class PastPaperExtractView(APIView):

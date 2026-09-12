@@ -12,6 +12,7 @@ import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
 import {
   extractPastPaperQuestions,
+  pollPastPaperUntilProcessed,
   savePastPaperAsQuiz,
   uploadPastPaper,
 } from '../../../src/services/curriculum';
@@ -44,13 +45,20 @@ export default function PastPaperScreen() {
     setGenerating(true);
     setError(null);
     try {
-      // Upload runs the extraction pipeline synchronously server-side, so
-      // the response already reflects the final processing_status —
-      // there's nothing to poll for here.
-      const uploaded = await uploadPastPaper(file, { title: file.name });
+      let uploaded = await uploadPastPaper(file, { title: file.name });
+      // Processing may now run in the background (see the backend's
+      // CELERY_TASK_ALWAYS_EAGER setting) — this resolves immediately
+      // when it's still running synchronously, so it's safe either way.
+      if (uploaded.processing_status === 'pending' || uploaded.processing_status === 'processing') {
+        uploaded = await pollPastPaperUntilProcessed(uploaded.id);
+      }
       setDocument(uploaded);
       if (uploaded.processing_status === 'failed') {
         setError(uploaded.processing_error || "Couldn't read this PDF.");
+        return;
+      }
+      if (uploaded.processing_status !== 'ready') {
+        setError('Still processing this paper — try generating again in a moment.');
         return;
       }
       const result = await extractPastPaperQuestions(uploaded.id);
@@ -221,3 +229,8 @@ export default function PastPaperScreen() {
     </SafeAreaView>
   );
 }
+
+
+
+
+

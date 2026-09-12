@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { fetchDocument } from "../../../src/services/documents";
+import {
+  fetchDocument,
+  pollDocumentUntilProcessed,
+} from "../../../src/services/documents";
 import useDocumentQA from "../../../src/hooks/useDocumentQA";
 import Screen from "../../../src/components/ui/Screen";
 import ModeTabs from "../../../src/components/ui/ModeTabs";
@@ -14,10 +17,28 @@ export default function DocumentDetail() {
   const [question, setQuestion] = useState("");
   const qa = useDocumentQA(id);
   useEffect(() => {
-    fetchDocument(id).then(setDocument);
+    let cancelled = false;
+    fetchDocument(id).then((doc) => {
+      if (cancelled) return;
+      setDocument(doc);
+      if (
+        doc.processing_status === "pending" ||
+        doc.processing_status === "processing"
+      ) {
+        pollDocumentUntilProcessed(id).then((updated) => {
+          if (!cancelled) setDocument(updated);
+        });
+      }
+    });
     qa.loadSessions();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
   if (!document) return <View className="flex-1 bg-background" />;
+  const stillProcessing =
+    document.processing_status === "pending" ||
+    document.processing_status === "processing";
   return (
     <Screen className="flex-1 bg-background">
       <ScrollView
@@ -41,6 +62,24 @@ export default function DocumentDetail() {
             </Text>
           </View>
         </View>
+        {stillProcessing && (
+          <View className="mt-4 rounded-2xl bg-surface-container-lowest p-4 flex-row items-center gap-3">
+            <Text className="font-body-md text-on-surface-variant flex-1">
+              Still processing this document — content will appear here once
+              it's ready.
+            </Text>
+          </View>
+        )}
+        {document.processing_status === "failed" && (
+          <View className="mt-4 rounded-2xl bg-error-container p-4">
+            <Text className="font-body-md text-on-error-container">
+              Processing failed
+              {document.processing_error
+                ? `: ${document.processing_error}`
+                : "."}
+            </Text>
+          </View>
+        )}
         <ModeTabs
           value={mode}
           onChange={setMode}
@@ -105,10 +144,12 @@ export default function DocumentDetail() {
               />
               <Pressable
                 onPress={() => {
+                  if (stillProcessing) return;
                   qa.sendQuestion(question);
                   setQuestion("");
                 }}
-                className="h-10 w-10 items-center justify-center rounded-full bg-primary"
+                disabled={stillProcessing}
+                className={`h-10 w-10 items-center justify-center rounded-full ${stillProcessing ? "bg-surface-container" : "bg-primary"}`}
                 accessibilityRole="button"
                 accessibilityLabel="Send document question"
               >

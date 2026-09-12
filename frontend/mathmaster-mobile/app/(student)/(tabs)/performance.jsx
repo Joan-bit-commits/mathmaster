@@ -50,7 +50,7 @@ export default function PerformanceScreen() {
             accessibilityLabel="Detailed performance"
             hitSlop={8}
           >
-            <MaterialIcon name="bar-chart" size={22} color="primary" />
+            <MaterialIcon name="bar_chart" size={22} color="primary" />
           </Pressable>
         </View>
 

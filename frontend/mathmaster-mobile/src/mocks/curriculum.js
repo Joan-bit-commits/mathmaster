@@ -1,21 +1,51 @@
-const delay = (value) => new Promise((resolve) => setTimeout(() => resolve(value), 300));
-export const MOCK_LEVELS = ['S1', 'S2', 'S3', 'S4', 'S5'].map((level, index) => ({ level, name: `Senior ${level.slice(1)}`, subject_count: 1, strand_count: 4 + index % 2, objective_count: 12 + index * 3, subjects: ['Mathematics'] }));
-export const MOCK_OBJECTIVES = [
-  { code: 'S1.M.A.1', level: 'S1', subject: 'Mathematics', strand: 'Algebra', text: 'Solve linear equations in one variable.', topics: ['Linear equations', 'Word problems'], difficulty: 'easy', estimated_hours: 8, common_misconceptions: ['Sign errors when moving terms across the equals sign'], workbook_refs: [{ textbook: 'Mathematics for Uganda Book 1', page: 45 }] },
-  { code: 'S1.M.N.1', level: 'S1', subject: 'Mathematics', strand: 'Number & Numeration', text: 'Convert numbers between base 10 and base 2.', topics: ['Number bases'], difficulty: 'easy', estimated_hours: 6, common_misconceptions: ['Forgetting positional values'], workbook_refs: [{ textbook: 'Mathematics for Uganda Book 1', page: 23 }] },
-  { code: 'S2.M.N.1', level: 'S2', subject: 'Mathematics', strand: 'Number & Numeration', text: 'Solve problems involving percentages, profit and loss, discount and commission.', topics: ['Profit and loss', 'Discount'], difficulty: 'medium', estimated_hours: 8, common_misconceptions: ['Confusing markup and profit margin'], workbook_refs: [{ textbook: 'Mathematics for Uganda Book 2', page: 38 }] },
-  { code: 'S3.M.T.1', level: 'S3', subject: 'Mathematics', strand: 'Trigonometry', text: 'Use sine, cosine and tangent ratios to find sides and angles of right-angled triangles.', topics: ['SOH CAH TOA', 'Bearings'], difficulty: 'medium', estimated_hours: 10, common_misconceptions: ['Choosing the wrong ratio'], workbook_refs: [{ textbook: 'Mathematics for Uganda Book 3', page: 78 }] },
-];
-export const MOCK_WORKED_EXAMPLES = { 'S1.M.A.1': [{ id: 'we-1', problem: 'A trader has 3x + 7 = 22. Find x.', solution_steps: [{ step: 1, text: 'Subtract 7 from both sides: 3x = 15.', mark: 'M1' }, { step: 2, text: 'Divide both sides by 3: x = 5.', mark: 'A1' }, { step: 3, text: 'Therefore, x = 5.', mark: 'B1' }], final_answer: 'x = 5', context: 'market', difficulty: 'easy' }], 'S3.M.T.1': [{ id: 'we-2', problem: 'A 5 m ladder makes an angle of 60° with the ground. Find its height.', solution_steps: [{ step: 1, text: 'sin 60° = opposite / 5', mark: 'M1' }, { step: 2, text: 'opposite = 5 × 0.866 = 4.33 m', mark: 'A1' }], final_answer: '4.33 m', context: 'school', difficulty: 'medium' }] };
-export const MOCK_LOCAL_PROBLEMS = Array.from({ length: 10 }, (_, index) => ({ id: `lp-${index + 1}`, code: 'S1.M.A.1', problem: `A shopkeeper bought ${index + 2} crates at shs. ${(index + 2) * 12000}. Form an equation for the total cost.`, difficulty: index % 2 ? 'medium' : 'easy', context: 'market', answer: `Total = shs. ${(index + 2) * 12000}` }));
-export const MOCK_UNEB_FORMAT = { UCE: { name: 'Uganda Certificate of Education', level: 'S4', papers: [{ code: 'Paper 1', duration_minutes: 120, total_marks: 100 }], topics_weight: { Algebra: 30, 'Number & Numeration': 15, 'Geometry & Measurement': 20, Trigonometry: 15 } }, UACE: { name: 'Uganda Advanced Certificate of Education', level: 'S6', papers: [{ code: 'Paper 1', duration_minutes: 180, total_marks: 100 }] } };
-export const MOCK_TEXTBOOKS = { S1: [{ title: 'Mathematics for Uganda Book 1', publisher: 'MK Publishers', page: 45 }], S2: [{ title: 'Mathematics for Uganda Book 2', publisher: 'MK Publishers', page: 38 }], S3: [{ title: 'Mathematics for Uganda Book 3', publisher: 'MK Publishers', page: 78 }] };
-export const mockFetchLevels = () => delay(MOCK_LEVELS);
-export const mockFetchLevel = (level) => delay({ Mathematics: { name: 'Mathematics', code: `${level}.M`, strands: { Algebra: { name: 'Algebra', code: `${level}.M.A`, objectives: MOCK_OBJECTIVES.filter((item) => item.level === level) } } } });
-export const mockFetchObjective = (code) => delay(MOCK_OBJECTIVES.find((item) => item.code === code) || MOCK_OBJECTIVES[0]);
-export const mockFetchStrand = (level, code) => delay({ name: 'Algebra', code: `${level}.M.${code}`, objectives: MOCK_OBJECTIVES.filter((item) => item.level === level) });
-export const mockFetchWorkedExamples = (code) => delay(MOCK_WORKED_EXAMPLES[code] || MOCK_WORKED_EXAMPLES['S1.M.A.1']);
-export const mockFetchLocalProblems = (code, difficulty) => delay(MOCK_LOCAL_PROBLEMS.filter((item) => item.code === code && (!difficulty || item.difficulty === difficulty)));
-export const mockFetchUNEBFormat = (exam) => delay(MOCK_UNEB_FORMAT[exam] || MOCK_UNEB_FORMAT.UCE);
-export const mockFetchTextbooks = (level) => delay(MOCK_TEXTBOOKS[level] || []);
-export const mockSearchObjectives = (query) => delay(MOCK_OBJECTIVES.filter((item) => `${item.text} ${item.topics.join(' ')}`.toLowerCase().includes(query.toLowerCase())));
+import { USE_MOCK_DATA, apiUpload, get, post } from './api';
+import { mockFetchLevels, mockFetchLevel, mockFetchObjective, mockFetchStrand, mockFetchWorkedExamples, mockFetchLocalProblems, mockFetchUNEBFormat, mockFetchTextbooks, mockSearchObjectives } from '../mocks/curriculum';
+
+const live = (fallback, fn) => USE_MOCK_DATA ? fallback() : fn();
+export const fetchLevels = () => live(mockFetchLevels, () => get('/api/curriculum/levels/'));
+export const fetchLevel = (level) => USE_MOCK_DATA ? mockFetchLevel(level) : get(`/api/curriculum/levels/${level}/`);
+export const fetchObjective = (code) => USE_MOCK_DATA ? mockFetchObjective(code) : get(`/api/curriculum/objectives/${code}/`);
+export const fetchStrand = (level, code) => USE_MOCK_DATA ? mockFetchStrand(level, code) : get(`/api/curriculum/strands/${level}/${code}/`);
+export const fetchWorkedExamples = (code) => USE_MOCK_DATA ? mockFetchWorkedExamples(code) : get(`/api/curriculum/worked-examples/?code=${encodeURIComponent(code)}`);
+export const fetchLocalProblems = (code, difficulty) => USE_MOCK_DATA ? mockFetchLocalProblems(code, difficulty) : get(`/api/curriculum/local-problems/?code=${encodeURIComponent(code)}${difficulty ? `&difficulty=${difficulty}` : ''}`);
+export const fetchUNEBFormat = (exam = 'UCE') => USE_MOCK_DATA ? mockFetchUNEBFormat(exam) : get(`/api/curriculum/uneb-format/?exam=${exam}`);
+export const fetchTextbooks = (level) => USE_MOCK_DATA ? mockFetchTextbooks(level) : get(`/api/curriculum/textbooks/?level=${level}`);
+export const searchObjectives = (query) => USE_MOCK_DATA ? mockSearchObjectives(query) : get(`/api/curriculum/search/?q=${encodeURIComponent(query)}`);
+
+// Past paper -> quiz generator (teacher/admin only). Note the URL prefix
+// here is /api/teacher/past-papers/, not /api/curriculum/ like everything
+// above — that's where these endpoints actually live on the backend.
+export function uploadPastPaper(file, metadata = {}, onProgress) {
+  const form = new FormData();
+  form.append('file', { uri: file.uri, name: file.name || 'paper.pdf', type: file.mimeType || 'application/pdf' });
+  form.append('title', metadata.title || file.name);
+  form.append('document_type', 'past_paper');
+  return apiUpload.upload('/api/teacher/past-papers/', form, { onProgress });
+}
+
+export const fetchPastPaper = (id) => get(`/api/teacher/past-papers/${id}/`);
+
+/**
+ * Same reasoning as documents.js's pollDocumentUntilProcessed — past
+ * papers can now be processed in the background too (same
+ * CELERY_TASK_ALWAYS_EAGER backend setting). Resolves immediately when
+ * the backend is running in its default synchronous/eager mode.
+ */
+export async function pollPastPaperUntilProcessed(id, { intervalMs = 1500, timeoutMs = 60000 } = {}) {
+  const startedAt = Date.now();
+  for (;;) {
+    const paper = await fetchPastPaper(id);
+    if (paper.processing_status === 'ready' || paper.processing_status === 'failed') {
+      return paper;
+    }
+    if (Date.now() - startedAt > timeoutMs) {
+      return paper;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
+export const extractPastPaperQuestions = (id) => get(`/api/teacher/past-papers/${id}/extract-quiz/`);
+
+export const savePastPaperAsQuiz = (id, { lessonId, questions, title }) =>
+  post(`/api/teacher/past-papers/${id}/save-as-quiz/`, { lesson_id: lessonId, questions, title });

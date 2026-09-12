@@ -16,7 +16,13 @@ from utils.gemini import (
 )
 from utils.sanitize import sanitize_text
 
-from .models import Document, DocumentChatSession, DocumentChunk, DocumentQuestion, ScanJob
+from .models import (
+    Document,
+    DocumentChatSession,
+    DocumentChunk,
+    DocumentQuestion,
+    ScanJob,
+)
 from .structure import format_curriculum_context
 
 logger = logging.getLogger(__name__)
@@ -28,25 +34,26 @@ CHUNK_OVERLAP = 100
 # Text extraction
 # ---------------------------------------------------------------------------
 
+
 def _is_image_file(document):
     """True when the uploaded document is a photographed/scanned image
     (JPEG/PNG) rather than a PDF, based on the stored filename."""
     content_type, _ = mimetypes.guess_type(document.file.name)
-    return bool(content_type) and content_type.startswith('image/')
+    return bool(content_type) and content_type.startswith("image/")
 
 
 def _ocr_image_bytes(image_bytes):
     return ask_gemini_vision_text(
         image_bytes,
-        'Transcribe all readable text from this image exactly as written, '
-        'preserving mathematical notation, equations, and layout as closely '
-        'as possible. Return plain text only — no commentary, no markdown.',
+        "Transcribe all readable text from this image exactly as written, "
+        "preserving mathematical notation, equations, and layout as closely "
+        "as possible. Return plain text only — no commentary, no markdown.",
     )
 
 
 def _page_to_png_bytes(page, resolution=150):
     buf = io.BytesIO()
-    page.to_image(resolution=resolution).original.save(buf, format='PNG')
+    page.to_image(resolution=resolution).original.save(buf, format="PNG")
     return buf.getvalue()
 
 
@@ -77,8 +84,14 @@ def extract_pages_from_pdf(file):
     """
     with pdfplumber.open(file) as pdf:
         if gemini_configured():
-            return [(index + 1, _ocr_image_bytes(_page_to_png_bytes(page))) for index, page in enumerate(pdf.pages)]
-        return [(index + 1, page.extract_text() or '') for index, page in enumerate(pdf.pages)]
+            return [
+                (index + 1, _ocr_image_bytes(_page_to_png_bytes(page)))
+                for index, page in enumerate(pdf.pages)
+            ]
+        return [
+            (index + 1, page.extract_text() or "")
+            for index, page in enumerate(pdf.pages)
+        ]
 
 
 def extract_text_from_image(file):
@@ -87,7 +100,7 @@ def extract_text_from_image(file):
     Treated as a single page of text — image documents don't have the
     page-boundary concept a PDF does.
     """
-    with file.open('rb') as image_file:
+    with file.open("rb") as image_file:
         image_bytes = image_file.read()
     return _ocr_image_bytes(image_bytes)
 
@@ -107,28 +120,39 @@ def extract_pages(document):
 # Chunking
 # ---------------------------------------------------------------------------
 
+
 def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     """Chunk a single block of text. Does not know about page boundaries —
     kept as-is (and still covered by existing tests) for callers that only
     have a plain string. Use chunk_pages() for page-aware chunking."""
-    chunks, current, current_tokens = [], '', 0
-    for paragraph in re.split(r'\n\s*\n', text):
+    chunks, current, current_tokens = [], "", 0
+    for paragraph in re.split(r"\n\s*\n", text):
         paragraph = paragraph.strip()
         if not paragraph:
             continue
         words = paragraph.split()
         if current and current_tokens + len(words) > chunk_size:
             chunks.append(
-                {'chunk_index': len(chunks), 'content': current.strip(), 'token_count': current_tokens}
+                {
+                    "chunk_index": len(chunks),
+                    "content": current.strip(),
+                    "token_count": current_tokens,
+                }
             )
             carry = current.split()[-overlap:]
-            current = ' '.join(carry + words)
+            current = " ".join(carry + words)
             current_tokens = len(current.split())
         else:
-            current = f'{current}\n\n{paragraph}'.strip()
+            current = f"{current}\n\n{paragraph}".strip()
             current_tokens += len(words)
     if current:
-        chunks.append({'chunk_index': len(chunks), 'content': current, 'token_count': current_tokens})
+        chunks.append(
+            {
+                "chunk_index": len(chunks),
+                "content": current,
+                "token_count": current_tokens,
+            }
+        )
     return chunks
 
 
@@ -146,38 +170,43 @@ def chunk_pages(pages, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
         if not text or not text.strip():
             continue
         for chunk in chunk_text(text, chunk_size=chunk_size, overlap=overlap):
-            all_chunks.append({**chunk, 'page_number': page_number})
+            all_chunks.append({**chunk, "page_number": page_number})
     for index, chunk in enumerate(all_chunks):
-        chunk['chunk_index'] = index
+        chunk["chunk_index"] = index
     return all_chunks
 
 
 def _detect_level(text, title):
-    combined = f'{text[:2000]} {title}'.lower()
-    for level in ('s1', 's2', 's3', 's4', 's5', 's6'):
-        if level in combined or f'senior {level[1]}' in combined:
+    combined = f"{text[:2000]} {title}".lower()
+    for level in ("s1", "s2", "s3", "s4", "s5", "s6"):
+        if level in combined or f"senior {level[1]}" in combined:
             return level.upper()
-    return ''
+    return ""
 
 
 # ---------------------------------------------------------------------------
 # Document processing
 # ---------------------------------------------------------------------------
 
+
 def process_document(document):
     try:
         document.processing_status = Document.ProcessingStatus.PROCESSING
-        document.processing_error = ''
-        document.save(update_fields=['processing_status', 'processing_error', 'updated_at'])
+        document.processing_error = ""
+        document.save(
+            update_fields=["processing_status", "processing_error", "updated_at"]
+        )
 
         pages = extract_pages(document)
-        text = '\n\n'.join(page_text for _, page_text in pages)
+        text = "\n\n".join(page_text for _, page_text in pages)
 
         document.extracted_text = text
         document.page_count = len(pages)
         document.detected_level = _detect_level(text, document.title)
         document.detected_subject = (
-            'Mathematics' if re.search(r'algebra|equation|geometry|mathematics', text, re.I) else ''
+            "Mathematics"
+            if re.search(r"algebra|equation|geometry|mathematics", text, re.I)
+            else ""
         )
         document.chunks.all().delete()
         DocumentChunk.objects.bulk_create(
@@ -187,35 +216,44 @@ def process_document(document):
         document.save()
         return document
     except Exception as exc:
-        logger.exception('Document processing failed: %s', document.id)
+        logger.exception("Document processing failed: %s", document.id)
         document.processing_status = Document.ProcessingStatus.FAILED
         document.processing_error = str(exc)
-        document.save(update_fields=['processing_status', 'processing_error', 'updated_at'])
+        document.save(
+            update_fields=["processing_status", "processing_error", "updated_at"]
+        )
         raise
 
 
 def retrieve_relevant_chunks(document, question, top_k=5):
     words = set(sanitize_text(question).lower().split())
     scored = [
-        (len(words & set(chunk.content.lower().split())) / max(1, chunk.token_count / 100), chunk)
+        (
+            len(words & set(chunk.content.lower().split()))
+            / max(1, chunk.token_count / 100),
+            chunk,
+        )
         for chunk in document.chunks.all()
     ]
-    return [chunk for _, chunk in sorted(scored, key=lambda item: item[0], reverse=True)[:top_k]]
+    return [
+        chunk
+        for _, chunk in sorted(scored, key=lambda item: item[0], reverse=True)[:top_k]
+    ]
 
 
 def _build_document_prompt(document, question, chunks):
-    context = '\n\n---\n\n'.join(
+    context = "\n\n---\n\n".join(
         f'[Page {chunk.page_number or "?"}]\n{chunk.content}' for chunk in chunks
     )
     return (
         f'{format_curriculum_context(level=document.detected_level or "S1")}\n\n'
-        f'DOCUMENT EXCERPTS:\n{context}\n\n'
-        f'STUDENT QUESTION: {question}\n\n'
-        'Answer only from the excerpts and cite page numbers.'
+        f"DOCUMENT EXCERPTS:\n{context}\n\n"
+        f"STUDENT QUESTION: {question}\n\n"
+        "Answer only from the excerpts and cite page numbers."
     )
 
 
-def _resolve_document_session(document, user, session_id, question=''):
+def _resolve_document_session(document, user, session_id, question=""):
     """Continue an existing session the caller points at, or start a new one.
 
     session_id is untrusted client input, so it's always scoped to the
@@ -248,7 +286,7 @@ def answer_document(document, question, user, session_id=None):
     answer = (
         ask_gemini(prompt)
         if gemini_configured()
-        else 'The AI tutor is not configured. The relevant document excerpts are available for review.'
+        else "The AI tutor is not configured. The relevant document excerpts are available for review."
     )
     record = DocumentQuestion.objects.create(
         document=document, user=user, question=question, answer=answer, session=session
@@ -268,19 +306,19 @@ def answer_document_stream(document, question, user, session_id=None):
     """
     question = sanitize_text(question)
     if not question:
-        yield _sse_error('EMPTY_QUESTION', 'Please enter a question.')
+        yield _sse_error("EMPTY_QUESTION", "Please enter a question.")
         return
 
     chunks = retrieve_relevant_chunks(document, question)
     if not chunks:
-        yield _sse_error('NO_CONTENT', 'No relevant content found in this document.')
+        yield _sse_error("NO_CONTENT", "No relevant content found in this document.")
         return
 
     session = _resolve_document_session(document, user, session_id, question=question)
     prompt = _build_document_prompt(document, question, chunks)
 
     if not gemini_configured():
-        answer = 'The AI tutor is not configured. The relevant document excerpts are available for review.'
+        answer = "The AI tutor is not configured. The relevant document excerpts are available for review."
         for token in _chunk(answer):
             yield f'data: {json.dumps({"token": token})}\n\n'
     else:
@@ -289,11 +327,12 @@ def answer_document_stream(document, question, user, session_id=None):
             for token in stream_gemini(prompt):
                 produced.append(token)
                 yield f'data: {json.dumps({"token": token})}\n\n'
-            answer = ''.join(produced)
+            answer = "".join(produced)
         except Exception as exc:
-            logger.exception('Document ask streaming failed: %s', document.id)
+            logger.exception("Document ask streaming failed: %s", document.id)
             yield _sse_error(
-                'AI_TUTOR_UNAVAILABLE', 'AI tutor is temporarily unavailable. Please try again later.'
+                "AI_TUTOR_UNAVAILABLE",
+                "AI tutor is temporarily unavailable. Please try again later.",
             )
             return
 
@@ -321,7 +360,8 @@ def _chunk(text: str, size: int = 24):
 # Scan-and-solve (unchanged)
 # ---------------------------------------------------------------------------
 
-def _coerce_text(value, fallback=''):
+
+def _coerce_text(value, fallback=""):
     """Gemini's JSON output isn't schema-enforced (ask_gemini_json just
     parses whatever text comes back), so a field we expect to be a plain
     string can arrive as a nested object or list instead — e.g. `text`
@@ -335,12 +375,15 @@ def _coerce_text(value, fallback=''):
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, dict):
-        for key in ('text', 'description', 'explanation', 'content', 'value'):
+        for key in ("text", "description", "explanation", "content", "value"):
             if isinstance(value.get(key), str):
                 return value[key]
-        return ' '.join(str(v) for v in value.values() if isinstance(v, (str, int, float))) or fallback
+        return (
+            " ".join(str(v) for v in value.values() if isinstance(v, (str, int, float)))
+            or fallback
+        )
     if isinstance(value, list):
-        return ' '.join(_coerce_text(item) for item in value) or fallback
+        return " ".join(_coerce_text(item) for item in value) or fallback
     return fallback
 
 
@@ -352,7 +395,7 @@ def _coerce_mark(value):
     if isinstance(value, (str, int, float)):
         return value
     if isinstance(value, dict):
-        for key in ('marks', 'total', 'value', 'mark'):
+        for key in ("marks", "total", "value", "mark"):
             if isinstance(value.get(key), (str, int, float)):
                 return value[key]
         return None
@@ -374,45 +417,66 @@ def _normalize_solution_steps(raw_steps):
     normalized = []
     for index, item in enumerate(raw_steps, start=1):
         if isinstance(item, str):
-            normalized.append({'step': index, 'text': item, 'mark': None})
+            normalized.append({"step": index, "text": item, "mark": None})
             continue
         if not isinstance(item, dict):
             continue
         text = _coerce_text(
-            item.get('text') or item.get('description') or item.get('explanation') or item.get('content'),
+            item.get("text")
+            or item.get("description")
+            or item.get("explanation")
+            or item.get("content"),
             fallback=_coerce_text(item),
         )
-        step_number = item.get('step') or item.get('step_number') or item.get('number') or index
+        step_number = (
+            item.get("step") or item.get("step_number") or item.get("number") or index
+        )
         if not isinstance(step_number, (str, int)):
             step_number = index
-        normalized.append({'step': step_number, 'text': text, 'mark': _coerce_mark(item.get('mark') or item.get('marks'))})
+        normalized.append(
+            {
+                "step": step_number,
+                "text": text,
+                "mark": _coerce_mark(item.get("mark") or item.get("marks")),
+            }
+        )
     return normalized
 
 
 def solve_scanned_problem(scan):
     if not gemini_configured():
-        raise RuntimeError('AI tutor is not configured')
+        raise RuntimeError("AI tutor is not configured")
     scan.status = ScanJob.ScanStatus.OCR
-    scan.save(update_fields=['status'])
-    with scan.image.open('rb') as image_file:
+    scan.save(update_fields=["status"])
+    with scan.image.open("rb") as image_file:
         from utils.gemini import _call_gemini_vision
 
         extracted = _call_gemini_vision(
             image_file.read(),
-            'Transcribe this Ugandan mathematics problem as JSON with keys text, uneb_code, topic.',
+            "Transcribe this Ugandan mathematics problem as JSON with keys text, uneb_code, topic.",
         )
-    scan.extracted_text = extracted.get('text', '')
-    scan.detected_uneb_code = extracted.get('uneb_code', '')
-    scan.detected_topic = extracted.get('topic', '')
+    scan.extracted_text = extracted.get("text", "")
+    scan.detected_uneb_code = extracted.get("uneb_code", "")
+    scan.detected_topic = extracted.get("topic", "")
     scan.status = ScanJob.ScanStatus.SOLVING
-    scan.save(update_fields=['status', 'extracted_text', 'detected_uneb_code', 'detected_topic'])
-    result = ask_gemini_json(
-        f'{format_curriculum_context(code=scan.detected_uneb_code or None)}\nSolve this problem step-by-step and return JSON keys problem_text, steps, final_answer:\n{scan.extracted_text}'
+    scan.save(
+        update_fields=[
+            "status",
+            "extracted_text",
+            "detected_uneb_code",
+            "detected_topic",
+        ]
     )
-    scan.problem_text = _coerce_text(result.get('problem_text'), fallback=scan.extracted_text)
-    scan.solution_steps = _normalize_solution_steps(result.get('steps', []))
-    scan.final_answer = _coerce_text(result.get('final_answer'))
-    scan.solution_text = '\n'.join(step['text'] for step in scan.solution_steps)
+    result = ask_gemini_json(
+        f"{format_curriculum_context(code=scan.detected_uneb_code or None)}\nSolve this problem step-by-step and return JSON keys problem_text, steps, final_answer:\n{scan.extracted_text}", max_output_tokens=8192
+
+    )
+    scan.problem_text = _coerce_text(
+        result.get("problem_text"), fallback=scan.extracted_text
+    )
+    scan.solution_steps = _normalize_solution_steps(result.get("steps", []))
+    scan.final_answer = _coerce_text(result.get("final_answer"))
+    scan.solution_text = "\n".join(step["text"] for step in scan.solution_steps)
     scan.status = ScanJob.ScanStatus.READY
     scan.completed_at = django_timezone.now()
     scan.save()
@@ -422,6 +486,7 @@ def solve_scanned_problem(scan):
 # ---------------------------------------------------------------------------
 # Past paper -> quiz extraction
 # ---------------------------------------------------------------------------
+
 
 def extract_past_paper_questions(document):
     """Pull structured exam questions out of a past paper's extracted text
@@ -434,7 +499,7 @@ def extract_past_paper_questions(document):
     silently returning an empty list.
     """
     if document.processing_status != Document.ProcessingStatus.READY:
-        raise ValueError('This paper has not finished processing yet.')
+        raise ValueError("This paper has not finished processing yet.")
     if not document.extracted_text.strip():
         return []
 
@@ -442,22 +507,27 @@ def extract_past_paper_questions(document):
         # Without AI configured, fall back to naive line splitting rather
         # than failing outright — not great, but usable for local dev.
         return [
-            {'question': line.strip(), 'type': 'short-answer', 'marks': 1, 'choices': []}
+            {
+                "question": line.strip(),
+                "type": "short-answer",
+                "marks": 1,
+                "choices": [],
+            }
             for line in document.extracted_text.splitlines()
             if line.strip()
         ][:50]
 
     prompt = (
-        'The following text was extracted from a UNEB mathematics past paper. '
-        'Identify only the actual exam QUESTIONS — ignore headers, instructions, '
-        'section titles, page numbers, and other formatting artifacts. For each '
+        "The following text was extracted from a UNEB mathematics past paper. "
+        "Identify only the actual exam QUESTIONS — ignore headers, instructions, "
+        "section titles, page numbers, and other formatting artifacts. For each "
         'question, return an object with keys: "question" (the question text), '
         '"type" ("multiple-choice" or "short-answer"), "marks" (integer — your '
         'best estimate from marks shown in the paper, else 1), and "choices" '
-        '(list of answer option strings if multiple-choice, else an empty list). '
+        "(list of answer option strings if multiple-choice, else an empty list). "
         'Return ONLY a JSON object with a single key "questions" holding this '
-        'list, at most 30 entries.\n\n'
-        f'TEXT:\n{document.extracted_text[:12000]}'
+        "list, at most 30 entries.\n\n"
+        f"TEXT:\n{document.extracted_text[:12000]}"
     )
     # A full past paper can easily have 15-30 questions once each carries
     # question/type/marks/choices — the default 2048-token budget cuts the
@@ -465,7 +535,7 @@ def extract_past_paper_questions(document):
     # that case is "Unterminated string" right at the very end of the
     # response, not a formatting problem the backslash repair can fix).
     result = ask_gemini_json(prompt, max_output_tokens=8192)
-    raw_questions = result.get('questions', [])
+    raw_questions = result.get("questions", [])
     if not isinstance(raw_questions, list):
         return []
 
@@ -473,10 +543,10 @@ def extract_past_paper_questions(document):
     for item in raw_questions[:30]:
         if not isinstance(item, dict):
             continue
-        question_text = _coerce_text(item.get('question'))
+        question_text = _coerce_text(item.get("question"))
         if not question_text:
             continue
-        marks = item.get('marks')
+        marks = item.get("marks")
         try:
             marks = int(marks)
         except (TypeError, ValueError):
@@ -484,14 +554,20 @@ def extract_past_paper_questions(document):
                 marks = int(float(marks))
             except (TypeError, ValueError):
                 marks = 1
-        q_type = item.get('type') if item.get('type') in ('multiple-choice', 'short-answer') else 'short-answer'
-        choices = item.get('choices') if isinstance(item.get('choices'), list) else []
+        q_type = (
+            item.get("type")
+            if item.get("type") in ("multiple-choice", "short-answer")
+            else "short-answer"
+        )
+        choices = item.get("choices") if isinstance(item.get("choices"), list) else []
         normalized.append(
             {
-                'question': question_text,
-                'type': q_type,
-                'marks': marks,
-                'choices': [str(c) for c in choices if isinstance(c, (str, int, float))],
+                "question": question_text,
+                "type": q_type,
+                "marks": marks,
+                "choices": [
+                    str(c) for c in choices if isinstance(c, (str, int, float))
+                ],
             }
         )
     return normalized
