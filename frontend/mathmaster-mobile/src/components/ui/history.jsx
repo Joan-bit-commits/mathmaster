@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import Screen from "../../../src/components/ui/Screen";
 import MaterialIcon from "../../../src/components/ui/MaterialIcon";
+import LatexText from "../../../src/components/ui/LatexText";
 import useScan from "../../../src/hooks/useScan";
 
 export default function ScanHistory() {
@@ -37,7 +38,9 @@ export default function ScanHistory() {
                 <Text className="font-label-sm text-primary">{scan.detected_uneb_code}</Text>
                 <Text className="font-body-sm text-on-surface-variant">{scan.status}</Text>
               </View>
-              <Text className="font-body-md mt-2 text-on-surface">{scan.problem_text}</Text>
+              <LatexText className="font-body-md mt-2 text-on-surface">
+                {scan.problem_text}
+              </LatexText>
             </Pressable>
           ))
         ) : (

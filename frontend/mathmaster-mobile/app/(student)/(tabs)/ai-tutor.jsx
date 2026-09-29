@@ -25,6 +25,7 @@ import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import ModeErrorBoundary from "../../../src/components/ui/ModeErrorBoundary";
 import ModeTabs from "../../../src/components/ui/ModeTabs";
 import Screen from "../../../src/components/ui/Screen";
+import LatexText from "../../../src/components/ui/LatexText";
 import useScan from "../../../src/hooks/useScan";
 import { useTabBarSpacing } from '../../../src/hooks/useTabBarSpacing';
 import { fetchDocuments } from "../../../src/services/documents";
@@ -270,9 +271,9 @@ function ScanPanel() {
                 {scan.status}
               </Text>
             </View>
-            <Text className="font-body-md mt-2 text-on-surface">
+            <LatexText className="font-body-md mt-2 text-on-surface">
               {scan.problem_text}
-            </Text>
+            </LatexText>
           </Pressable>
         ))
       ) : (

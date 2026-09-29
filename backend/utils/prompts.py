@@ -1,5 +1,6 @@
 def math_tutor_prompt(topic, question, level='', context=''):
     from curriculum.structure import format_curriculum_context
+    from utils.math_notation import LATEX_MATH_STYLE
 
     curriculum = format_curriculum_context(level=level or 'S1')
     return f"""
@@ -31,6 +32,7 @@ Rules:
    - One similar worked example
    - One practice question (without the answer)
 8. Encourage the student.
+9. {LATEX_MATH_STYLE}
 
 Format your response exactly like this:
 

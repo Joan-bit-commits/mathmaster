@@ -21,6 +21,7 @@ import Button from "../../../../src/components/ui/Button";
 import KeyboardScreen from "../../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../../src/components/ui/MaterialIcon";
 import Screen from "../../../../src/components/ui/Screen";
+import LatexText from "../../../../src/components/ui/LatexText";
 import { askAIStream, fetchSession } from "../../../../src/services/aiTutor";
 
 function TypingDots() {
@@ -73,11 +74,11 @@ function ChatMessage({ isUser, content }) {
             : "bg-surface-container-lowest shadow-level-1 rounded-tl-sm"
         }`}
       >
-        <Text
+        <LatexText
           className={`text-[16px] leading-6 ${isUser ? "text-on-primary" : "text-on-surface"}`}
         >
           {content}
-        </Text>
+        </LatexText>
       </View>
     </View>
   );

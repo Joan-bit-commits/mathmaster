@@ -15,6 +15,17 @@ export const useAuthStore = create(
       isAuthenticated: false,
       isHydrated: false,
 
+      // Called by onRehydrateStorage below once AsyncStorage has finished
+      // restoring state. Previously referenced but never defined here —
+      // `state?.setHydrated?.()` silently no-op'd, so hydration completion
+      // only ever got signaled through the separate explicit
+      // `useAuthStore.setState({ isHydrated: true })` call in
+      // rehydrateAuth() below, not through zustand's own persist
+      // lifecycle. Both are kept now: this makes isHydrated correct even
+      // if something else ever triggers rehydration through a different
+      // path than the app's one explicit rehydrateAuth() call.
+      setHydrated: () => set({ isHydrated: true }),
+
       setTokens: ({ access, refresh }) =>
         set({ accessToken: access, refreshToken: refresh, isAuthenticated: true }),
 

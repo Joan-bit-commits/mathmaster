@@ -3,6 +3,10 @@
 import io
 import json
 import logging
+import re
+import threading
+import time
+from collections import deque
 
 import google.generativeai as genai
 from django.conf import settings
@@ -32,6 +36,139 @@ def _extract_text(response) -> str:
     return text
 
 
+# ---------------------------------------------------------------------------
+# Rate limiting + 429 handling
+#
+# Every function below that calls Gemini routes its actual network call
+# through _generate_content() rather than calling model.generate_content()
+# directly, so the rate limiting and retry behaviour here is consistent
+# across text, streaming, and vision calls instead of being duplicated
+# (and potentially drifting) four separate times.
+# ---------------------------------------------------------------------------
+
+class _RateLimiter:
+    """In-process sliding-window limiter: blocks the calling thread until
+    there's room within `max_calls` calls per `period_seconds`.
+
+    Coordinates threads WITHIN one Python process — e.g. the concurrent
+    per-page OCR calls in curriculum.services.extract_pages_from_pdf all
+    share one limiter instance and correctly queue behind each other. It
+    does NOT coordinate across separate Celery worker processes: each
+    worker process gets its own independent limiter and its own budget,
+    so running multiple workers means the real project-wide rate can
+    exceed GEMINI_RATE_LIMIT_RPM. Coordinating across processes would need
+    a shared store (Redis, which this project already has for Celery) —
+    worth doing if you run more than one worker; this is the single-worker
+    first pass.
+    """
+
+    def __init__(self, max_calls: int, period_seconds: float):
+        self.max_calls = max_calls
+        self.period_seconds = period_seconds
+        self._lock = threading.Lock()
+        self._calls = deque()
+
+    def acquire(self):
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                while self._calls and now - self._calls[0] >= self.period_seconds:
+                    self._calls.popleft()
+                if len(self._calls) < self.max_calls:
+                    self._calls.append(now)
+                    return
+                wait = self.period_seconds - (now - self._calls[0])
+            time.sleep(max(wait, 0.05))
+
+
+_rate_limiter = None
+_rate_limiter_lock = threading.Lock()
+
+
+def _get_rate_limiter() -> _RateLimiter:
+    global _rate_limiter
+    if _rate_limiter is None:
+        with _rate_limiter_lock:
+            if _rate_limiter is None:
+                _rate_limiter = _RateLimiter(max_calls=settings.GEMINI_RATE_LIMIT_RPM, period_seconds=60)
+    return _rate_limiter
+
+
+# Gemini's 429 error bodies include a structured retry_delay (and often a
+# human-readable "Please retry in X.Ys" line too) — parse whichever is
+# present rather than guessing a backoff, since the server is telling us
+# exactly how long the per-minute window has left.
+_RETRY_DELAY_PATTERN = re.compile(r'retry_delay\s*\{\s*seconds:\s*(\d+)')
+_RETRY_IN_PATTERN = re.compile(r'[Rr]etry in ([\d.]+)s')
+# The daily quota (GenerateRequestsPerDay...) resets roughly 24 hours after
+# first use, not within the current request — retrying with any backoff
+# short of "tomorrow" is pointless, so this is detected separately from an
+# ordinary per-minute 429 and fails fast instead of retrying.
+_DAILY_QUOTA_MARKER = 'PerDay'
+
+MAX_429_RETRIES = 2
+MAX_429_WAIT_SECONDS = 65  # cap a single wait so one call can't block a worker thread indefinitely
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    text = str(exc)
+    return '429' in text or ('quota' in text.lower() and 'exceed' in text.lower())
+
+
+def _is_daily_quota_error(exc: Exception) -> bool:
+    return _DAILY_QUOTA_MARKER in str(exc)
+
+
+def _parse_retry_delay_seconds(exc: Exception) -> float | None:
+    text = str(exc)
+    match = _RETRY_DELAY_PATTERN.search(text) or _RETRY_IN_PATTERN.search(text)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _generate_content(model, contents, generation_config, stream: bool = False):
+    """The one place that actually calls model.generate_content().
+
+    Applies the shared rate limiter before every attempt, and on a 429:
+    a per-minute quota error waits the server-specified delay (capped)
+    and retries up to MAX_429_RETRIES times; a per-day quota error fails
+    immediately with a clear, distinct message, since no in-request wait
+    can fix that — it needs a much longer wait (up to ~24h) or a higher
+    tier.
+    """
+    last_exc = None
+    for attempt in range(MAX_429_RETRIES + 1):
+        _get_rate_limiter().acquire()
+        try:
+            return model.generate_content(contents, generation_config=generation_config, stream=stream)
+        except Exception as exc:
+            if not _is_rate_limit_error(exc):
+                raise
+            last_exc = exc
+            if _is_daily_quota_error(exc):
+                raise RuntimeError(
+                    "Gemini's daily request quota has been used up for this project. "
+                    'This resets roughly 24 hours after the first request of the day — '
+                    'try again later, or upgrade to a paid Gemini tier for a much higher limit.'
+                ) from exc
+            if attempt >= MAX_429_RETRIES:
+                break
+            delay = _parse_retry_delay_seconds(exc)
+            wait = min(delay, MAX_429_WAIT_SECONDS) if delay is not None else min(5 * (2 ** attempt), MAX_429_WAIT_SECONDS)
+            logger.warning(
+                'Gemini rate limit hit (attempt %d/%d) — waiting %.1fs before retrying.',
+                attempt + 1,
+                MAX_429_RETRIES,
+                wait,
+            )
+            time.sleep(wait)
+    raise RuntimeError('Gemini rate limit exceeded after retrying — please try again shortly.') from last_exc
+
+
 def ask_gemini(prompt: str, history: list[dict] | None = None, max_output_tokens: int = 2048) -> str:
     """Send prompt (plus optional chat history) to Gemini and return the text.
 
@@ -56,7 +193,8 @@ def ask_gemini(prompt: str, history: list[dict] | None = None, max_output_tokens
     contents.append({'role': 'user', 'parts': [prompt]})
 
     model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(
+    response = _generate_content(
+        model,
         contents,
         generation_config={
             'temperature': 0.3,
@@ -85,7 +223,8 @@ def stream_gemini(prompt: str, history: list[dict] | None = None):
     contents.append({'role': 'user', 'parts': [prompt]})
 
     model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(
+    response = _generate_content(
+        model,
         contents,
         generation_config={
             'temperature': 0.3,
@@ -109,7 +248,8 @@ def _call_gemini_vision(image_bytes: bytes, prompt: str) -> dict:
     if not settings.GENAI_API_KEY:
         raise RuntimeError('Gemini API key is not configured.')
     model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(
+    response = _generate_content(
+        model,
         [prompt, Image.open(io.BytesIO(image_bytes))],
         generation_config={'temperature': 0.3, 'max_output_tokens': 1024},
     )
@@ -133,7 +273,8 @@ def ask_gemini_vision_text(image_bytes: bytes, prompt: str) -> str:
     if not settings.GENAI_API_KEY:
         raise RuntimeError('Gemini API key is not configured.')
     model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(
+    response = _generate_content(
+        model,
         [prompt, Image.open(io.BytesIO(image_bytes))],
         generation_config={'temperature': 0.2, 'max_output_tokens': 2048},
     )
@@ -223,3 +364,4 @@ def ask_gemini_json(prompt: str, max_output_tokens: int = 2048) -> dict:
                 len(text),
             )
             raise RuntimeError('Gemini returned a response that could not be parsed as JSON.') from retry_exc
+

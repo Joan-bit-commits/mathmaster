@@ -187,6 +187,8 @@ AUTH_USER_MODEL = 'accounts.User'
 
 GENAI_API_KEY = config('GENAI_API_KEY', default='')
 GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.6-flash')
+GEMINI_RATE_LIMIT_RPM = config('GEMINI_RATE_LIMIT_RPM', default=5, cast=int)
+
 
 # ---------------------------------------------------------------------------
 # Cache (LocMemCache for dev; swap for Redis in production)
