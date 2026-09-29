@@ -1,88 +1,107 @@
+import axios from 'axios';
 import Constants from 'expo-constants';
+
 import { useAuthStore } from '../stores/authStore';
 
 export const USE_MOCK_DATA = Constants.expoConfig?.extra?.useMockData ?? true;
 export const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://192.168.0.148:8000';
 
 export function isNetworkError(err) {
-  return err?.message === 'NETWORK_ERROR' || err?.message === 'Network request failed';
+  return err?.message === 'NETWORK_ERROR' || err?.code === 'ERR_NETWORK';
 }
 
-export const api = {
-  async request(path, { method = 'GET', body, auth = true, retry = true } = {}) {
-    const store = useAuthStore.getState();
-    const headers = { 'Content-Type': 'application/json' };
-    if (auth && store.accessToken) headers.Authorization = `Bearer ${store.accessToken}`;
+const client = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
 
-    let response;
-    try {
-      response = await fetch(`${API_URL}${path}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
-    } catch (err) {
+// Attach the current access token to every request. Read from the store
+// at request time (an interceptor, not something captured once at
+// client-creation time) — the token changes across login/logout/refresh,
+// and this always reflects whatever's current. Pass { auth: false } in a
+// call's options to skip this (public endpoints).
+client.interceptors.request.use((config) => {
+  if (config.auth !== false) {
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  return config;
+});
+
+// Shared in-flight refresh promise: if several requests 401 at once (e.g.
+// a screen fires off three parallel fetches right as the access token
+// expires), they should all await the SAME refresh call rather than each
+// triggering their own — the backend would otherwise see redundant
+// refresh requests, and only the first would actually still be valid
+// depending on refresh-token rotation.
+let refreshPromise = null;
+
+async function refreshTokens() {
+  const { refreshToken, setTokens } = useAuthStore.getState();
+  if (!refreshToken) throw new Error('NO_REFRESH_TOKEN');
+  const response = await axios.post(`${API_URL}/api/accounts/token/refresh/`, { refresh: refreshToken });
+  setTokens({ access: response.data.access, refresh: refreshToken });
+  return response.data.access;
+}
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const { config, response } = error;
+
+    if (!response) {
       throw new Error('NETWORK_ERROR');
     }
 
-    if (response.status === 401 && auth && retry && store.refreshToken) {
-      // Try refresh once, then retry the original request.
+    if (response.status === 401 && config.auth !== false && !config._retried) {
+      config._retried = true;
       try {
-        const refreshed = await authServiceRefresh(store.refreshToken);
-        store.setTokens({ access: refreshed.access, refresh: store.refreshToken });
-        return api.request(path, { method, body, auth, retry: false });
+        refreshPromise = refreshPromise || refreshTokens();
+        const newAccessToken = await refreshPromise;
+        config.headers.Authorization = `Bearer ${newAccessToken}`;
+        return client(config);
       } catch {
-        store.logout();
+        useAuthStore.getState().logout();
         throw new Error('SESSION_EXPIRED');
+      } finally {
+        refreshPromise = null;
       }
     }
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const message = data?.error?.message || data?.detail || `Request failed (${response.status})`;
-      const error = new Error(message);
-      error.status = response.status;
-      error.details = data?.error?.details;
-      throw error;
-    }
-    return data;
-  },
+    const data = response.data || {};
+    const message = data?.error?.message || data?.detail || `Request failed (${response.status})`;
+    const normalized = new Error(message);
+    normalized.status = response.status;
+    normalized.details = data?.error?.details;
+    throw normalized;
+  }
+);
+
+export const get = (path, opts = {}) => client.get(path, opts).then((r) => r.data);
+export const post = (path, body, opts = {}) => client.post(path, body, opts).then((r) => r.data);
+export const patch = (path, body, opts = {}) => client.patch(path, body, opts).then((r) => r.data);
+export const del = (path, opts = {}) => client.delete(path, opts).then((r) => r.data);
+
+// Kept for any call site still using the older api.request(...) shape.
+export const api = {
+  request: (path, { method = 'GET', body, ...opts } = {}) =>
+    client.request({ url: path, method, data: body, ...opts }).then((r) => r.data),
 };
 
-async function authServiceRefresh(refresh) {
-  const response = await fetch(`${API_URL}/api/accounts/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh }),
-  });
-  if (!response.ok) throw new Error('REFRESH_FAILED');
-  return response.json();
-}
-
-export const get = (path, opts) => api.request(path, { method: 'GET', ...opts });
-export const post = (path, body, opts) => api.request(path, { method: 'POST', body, ...opts });
-export const patch = (path, body, opts) => api.request(path, { method: 'PATCH', body, ...opts });
-export const del = (path, opts) => api.request(path, { method: 'DELETE', ...opts });
-
 export const apiUpload = {
-  upload(path, formData, { onProgress, method = 'POST' } = {}) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      const token = useAuthStore.getState().accessToken;
-      xhr.open(method, `${API_URL}${path}`);
-      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) onProgress(event.loaded / event.total);
-      };
-      xhr.onload = () => {
-        let payload = xhr.responseText;
-        try { payload = JSON.parse(xhr.responseText); } catch {}
-        if (xhr.status >= 200 && xhr.status < 300) resolve(payload);
-        else reject(Object.assign(new Error(`Upload failed: ${xhr.status}`), { status: xhr.status }));
-      };
-      xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.onabort = () => reject(new Error('UPLOAD_CANCELLED'));
-      xhr.send(formData);
-    });
+  // axios handles multipart FormData and upload progress natively — this
+  // replaces what used to be a hand-rolled XMLHttpRequest wrapper.
+  upload(path, formData, { onProgress, method = 'post' } = {}) {
+    return client
+      .request({
+        url: path,
+        method,
+        data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (event) => {
+          if (event.total && onProgress) onProgress(event.loaded / event.total);
+        },
+      })
+      .then((r) => r.data);
   },
 };

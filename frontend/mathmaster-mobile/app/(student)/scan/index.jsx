@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Screen from "../../../src/components/ui/Screen";
+import LatexText from "../../../src/components/ui/LatexText";
 import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import CaptureFAB from "../../../src/components/ui/CaptureFAB";
 import useScan from "../../../src/hooks/useScan";
@@ -107,9 +108,9 @@ export default function ScanHome() {
                   {scan.status}
                 </Text>
               </View>
-              <Text className="font-body-md mt-2 text-on-surface">
+              <LatexText className="font-body-md text-on-surface">
                 {scan.problem_text}
-              </Text>
+              </LatexText>
             </Pressable>
           ))
         ) : (

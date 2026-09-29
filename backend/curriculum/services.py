@@ -3,6 +3,7 @@ import json
 import logging
 import mimetypes
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pdfplumber
 from django.utils import timezone as django_timezone
@@ -14,6 +15,7 @@ from utils.gemini import (
     gemini_configured,
     stream_gemini,
 )
+from utils.math_notation import LATEX_MATH_STYLE
 from utils.sanitize import sanitize_text
 
 from .models import (
@@ -27,6 +29,12 @@ from .structure import format_curriculum_context
 
 logger = logging.getLogger(__name__)
 CHUNK_SIZE = 800
+# How many pages' Vision OCR calls run concurrently per document. Each is
+# a network call (I/O-bound, so Python's GIL isn't a bottleneck here) —
+# capped rather than unbounded to avoid bursting past Gemini's per-project
+# rate limit on a large upload, which would just turn concurrent 429s into
+# concurrent failures instead of actually finishing faster.
+MAX_CONCURRENT_PAGE_OCR = 5
 CHUNK_OVERLAP = 100
 
 
@@ -46,8 +54,9 @@ def _ocr_image_bytes(image_bytes):
     return ask_gemini_vision_text(
         image_bytes,
         "Transcribe all readable text from this image exactly as written, "
-        "preserving mathematical notation, equations, and layout as closely "
-        "as possible. Return plain text only — no commentary, no markdown.",
+        "preserving equations and layout as closely as possible. "
+        f"{LATEX_MATH_STYLE} "
+        "Return plain text only — no commentary, no markdown.",
     )
 
 
@@ -81,17 +90,54 @@ def extract_pages_from_pdf(file):
     Gemini isn't configured does this fall back to pdfplumber's text
     layer, which is degraded (loses embedded-image formulas) but usable
     for local dev without an API key.
+
+    Pages are OCR'd concurrently (bounded by MAX_CONCURRENT_PAGE_OCR)
+    rather than one at a time — each call is a network round trip, so
+    running several at once cuts wall-clock processing time roughly in
+    proportion to how many run in parallel, without changing the total
+    number of Gemini calls or tokens billed. A single page's OCR failure
+    doesn't fail the whole document: that page's text becomes a visible
+    "[Page N: could not be read]" marker and every other page still
+    completes normally. Only a total wipeout — every page failing — raises,
+    so the document still gets marked FAILED (and retried by the Celery
+    task) rather than silently "succeeding" with no real content.
     """
     with pdfplumber.open(file) as pdf:
-        if gemini_configured():
-            return [
-                (index + 1, _ocr_image_bytes(_page_to_png_bytes(page)))
-                for index, page in enumerate(pdf.pages)
-            ]
-        return [
-            (index + 1, page.extract_text() or "")
-            for index, page in enumerate(pdf.pages)
-        ]
+        pages = list(pdf.pages)
+        if not gemini_configured():
+            return [(index + 1, page.extract_text() or "") for index, page in enumerate(pages)]
+        # Rendering needs the pdfplumber/pdfium document to still be open,
+        # so this part stays sequential (it's CPU-bound anyway, not the
+        # slow part). Only the resulting PNG bytes — plain data, no
+        # dependency on the open file — get passed to the concurrent OCR
+        # calls below.
+        page_images = [_page_to_png_bytes(page) for page in pages]
+
+    if not page_images:
+        return []
+
+    results = [None] * len(page_images)
+    failed_flags = [False] * len(page_images)
+
+    def _ocr_one(index, image_bytes):
+        try:
+            return index, _ocr_image_bytes(image_bytes), False
+        except Exception as exc:
+            logger.exception("Vision OCR failed for page %d", index + 1)
+            return index, f"[Page {index + 1}: could not be read — {exc}]", True
+
+    max_workers = min(MAX_CONCURRENT_PAGE_OCR, len(page_images))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(_ocr_one, index, image_bytes) for index, image_bytes in enumerate(page_images)]
+        for future in as_completed(futures):
+            index, text, failed = future.result()
+            results[index] = text
+            failed_flags[index] = failed
+
+    if all(failed_flags):
+        raise RuntimeError("Vision OCR failed for every page of this document.")
+
+    return [(index + 1, text) for index, text in enumerate(results)]
 
 
 def extract_text_from_image(file):
@@ -249,7 +295,7 @@ def _build_document_prompt(document, question, chunks):
         f'{format_curriculum_context(level=document.detected_level or "S1")}\n\n'
         f"DOCUMENT EXCERPTS:\n{context}\n\n"
         f"STUDENT QUESTION: {question}\n\n"
-        "Answer only from the excerpts and cite page numbers."
+        f"Answer only from the excerpts and cite page numbers. {LATEX_MATH_STYLE}"
     )
 
 
@@ -453,7 +499,8 @@ def solve_scanned_problem(scan):
 
         extracted = _call_gemini_vision(
             image_file.read(),
-            "Transcribe this Ugandan mathematics problem as JSON with keys text, uneb_code, topic.",
+            "Transcribe this Ugandan mathematics problem as JSON with keys "
+            f"text, uneb_code, topic. {LATEX_MATH_STYLE}",
         )
     scan.extracted_text = extracted.get("text", "")
     scan.detected_uneb_code = extracted.get("uneb_code", "")
@@ -468,8 +515,10 @@ def solve_scanned_problem(scan):
         ]
     )
     result = ask_gemini_json(
-        f"{format_curriculum_context(code=scan.detected_uneb_code or None)}\nSolve this problem step-by-step and return JSON keys problem_text, steps, final_answer:\n{scan.extracted_text}", max_output_tokens=8192
-
+        f"{format_curriculum_context(code=scan.detected_uneb_code or None)}\n"
+        f"Solve this problem step-by-step and return JSON keys problem_text, steps, final_answer:\n"
+        f"{scan.extracted_text}\n\n{LATEX_MATH_STYLE}",
+        max_output_tokens=8192,
     )
     scan.problem_text = _coerce_text(
         result.get("problem_text"), fallback=scan.extracted_text
@@ -525,6 +574,7 @@ def extract_past_paper_questions(document):
         '"type" ("multiple-choice" or "short-answer"), "marks" (integer — your '
         'best estimate from marks shown in the paper, else 1), and "choices" '
         "(list of answer option strings if multiple-choice, else an empty list). "
+        f"{LATEX_MATH_STYLE} "
         'Return ONLY a JSON object with a single key "questions" holding this '
         "list, at most 30 entries.\n\n"
         f"TEXT:\n{document.extracted_text[:12000]}"
@@ -571,3 +621,4 @@ def extract_past_paper_questions(document):
             }
         )
     return normalized
+

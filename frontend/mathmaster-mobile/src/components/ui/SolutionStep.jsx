@@ -2,6 +2,8 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import LatexText from './LatexText';
+
 // step is normalized server-side (see curriculum/services.py::_normalize_solution_steps),
 // but this stays defensive too: rendering a non-primitive value directly as a
 // <Text> child crashes React with "Objects are not valid as a React child",
@@ -32,7 +34,7 @@ export default function SolutionStep({ step, index = 0, onExplain, className = '
           <Text className="font-title-lg text-on-primary">{label}</Text>
         </View>
         <View className="flex-1">
-          <Text className="font-body-md text-on-surface">{text}</Text>
+          <LatexText className="font-body-md text-on-surface">{text}</LatexText>
           {mark != null && (
             <Text className="mt-2 self-start rounded-full bg-primary-fixed px-2 py-0.5 font-label-sm text-on-primary-fixed">
               {mark}

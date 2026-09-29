@@ -7,6 +7,7 @@ import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import Button from "../../../src/components/ui/Button";
 import TopicContextCard from "../../../src/components/ui/TopicContextCard";
 import SolutionStep from "../../../src/components/ui/SolutionStep";
+import LatexText from "../../../src/components/ui/LatexText";
 import ConfidenceIndicator from "../../../src/components/ui/ConfidenceIndicator";
 import LocalContextPill from "../../../src/components/ui/LocalContextPill";
 import QuickPromptChips from "../../../src/components/ui/QuickPromptChips";
@@ -134,15 +135,15 @@ export default function ScanResult() {
 
         {tab === "Solution" && (
           <View className="mt-5">
-            <Text className="font-body-md text-on-surface">
+            <LatexText className="font-body-md text-on-surface">
               {scan.problem_text}
-            </Text>
+            </LatexText>
             <Text className="font-label-sm mt-6 text-on-surface-variant">
               Final answer
             </Text>
-            <Text className="font-headline-md mt-1 text-primary">
+            <LatexText className="font-headline-md mt-1 text-primary">
               {scan.final_answer}
-            </Text>
+            </LatexText>
             <ConfidenceIndicator
               confidence={scan.confidence || 0.9}
               className="mt-3"

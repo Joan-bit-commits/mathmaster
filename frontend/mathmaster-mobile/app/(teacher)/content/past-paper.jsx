@@ -10,6 +10,7 @@ import ErrorState from '../../../src/components/ui/ErrorState';
 import LessonPicker from '../../../src/components/ui/LessonPicker';
 import LoadingSkeleton from '../../../src/components/ui/LoadingSkeleton';
 import MaterialIcon from '../../../src/components/ui/MaterialIcon';
+import LatexText from '../../../src/components/ui/LatexText';
 import {
   extractPastPaperQuestions,
   pollPastPaperUntilProcessed,
@@ -217,7 +218,7 @@ export default function PastPaperScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`${isExcluded ? 'Include' : 'Exclude'} question: ${item.question}`}
               >
-                <Text className="font-body-md text-on-surface">{item.question}</Text>
+                <LatexText className="font-body-md text-on-surface">{item.question}</LatexText>
                 <Text className="font-label-sm mt-2 text-primary">
                   {item.marks} mark{item.marks === 1 ? '' : 's'} · {item.type === 'multiple-choice' ? 'Multiple choice' : 'Short answer'}
                 </Text>
@@ -229,8 +230,3 @@ export default function PastPaperScreen() {
     </SafeAreaView>
   );
 }
-
-
-
-
-

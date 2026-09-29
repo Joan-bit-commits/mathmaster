@@ -145,6 +145,8 @@ def teacher_overview():
     """Cohort-level stats for teachers/admins."""
     from django.contrib.auth import get_user_model
 
+    from learning.models import Lesson, Quiz, Topic
+
     User = get_user_model()
     now = timezone.now()
     students = User.objects.filter(role='student')
@@ -196,4 +198,12 @@ def teacher_overview():
             if r['quiz__lesson__topic__id'] is not None
         ],
         'score_distribution': distribution_buckets,
+        # The mobile teacher dashboard's "Overview" stat grid reads
+        # overview.coverage.{topics,lessons,quizzes} — this field must
+        # stay present or those tiles silently show 0.
+        'coverage': {
+            'topics': Topic.objects.count(),
+            'lessons': Lesson.objects.count(),
+            'quizzes': Quiz.objects.count(),
+        },
     }
