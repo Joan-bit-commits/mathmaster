@@ -17,3 +17,5 @@ Pillow==11.0.0
 google-cloud-vision==3.7.4
 celery==5.4.0
 redis==5.2.1
+gunicorn==23.0.0
+whitenoise==6.9.0

@@ -1,6 +1,8 @@
 services:
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     command: sh -c "python manage.py migrate && python manage.py seed_learning && python manage.py runserver 0.0.0.0:8000"
     environment:
       SECRET_KEY: dev-secret-key-change-me
@@ -31,7 +33,9 @@ services:
       - ./backend:/app
 
   worker:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     command: celery -A config worker -l info
     environment:
       SECRET_KEY: dev-secret-key-change-me

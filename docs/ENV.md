@@ -66,3 +66,20 @@ All configuration is read from environment variables via [python-decouple](https
 | `SENTRY_DSN` | *(empty)* | Sentry DSN. Empty disables Sentry. |
 | `SECURE_SSL_REDIRECT` | `true` | Redirect HTTP→HTTPS (only when `DEBUG=false`). |
 | `SECURE_HSTS_SECONDS` | `31536000` | HSTS max-age (only when `DEBUG=false`). |
+
+## Container deployment
+
+The repository includes separate container paths for development and production:
+
+- `docker-compose.yml` keeps the local development server and eager/local workflow.
+- `docker-compose.prod.yml` runs Gunicorn for the API and a separate Celery worker.
+- `backend/Dockerfile.dev` is the development image.
+- `backend/Dockerfile` is the production image and runs migrations plus `collectstatic` before Gunicorn.
+
+For production Compose, copy `backend/.env.prod.example` to `backend/.env.prod`, replace all placeholders, and run:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+Production should use a managed PostgreSQL/Redis service or secured private container network, HTTPS at the reverse proxy, and persistent/object storage for `MEDIA_ROOT` uploads. The mobile app must be rebuilt with its hosted HTTPS API URL after deployment.
