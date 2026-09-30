@@ -7,12 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 EXPOSE 8000
 
-RUN chmod +x entrypoint.prod.sh
-
-CMD ["/app/entrypoint.prod.sh"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
