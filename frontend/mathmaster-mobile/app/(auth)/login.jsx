@@ -55,7 +55,7 @@ export default function LoginScreen() {
             <Input
               label="Password" leftIcon="lock" value={password} onChangeText={setPassword} secureTextEntry={!showPassword}
               autoComplete="password" textContentType="password"
-              rightIcon={showPassword ? 'visibility-off' : 'visibility'} onRightIconPress={() => setShowPassword(!showPassword)}
+              rightIcon={showPassword ? 'visibility_off' : 'visibility'} onRightIconPress={() => setShowPassword(!showPassword)}
               accessibilityLabel="Password"
             />
           </Animated.View>
@@ -69,27 +69,31 @@ export default function LoginScreen() {
             <Button label="Sign In" onPress={() => handleLogin(false)} loading={loading} fullWidth accessibilityLabel="Sign in" />
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(280).duration(400)} className="flex-row items-center my-8">
-            <View className="flex-1 h-px bg-outline-variant" />
-            <Text className="px-2 font-body-sm text-body-sm text-outline">or try a demo</Text>
-            <View className="flex-1 h-px bg-outline-variant" />
-          </Animated.View>
+          {__DEV__ && (
+            <>
+              <Animated.View entering={FadeInDown.delay(280).duration(400)} className="flex-row items-center my-8">
+                <View className="flex-1 h-px bg-outline-variant" />
+                <Text className="px-2 font-body-sm text-body-sm text-outline">or try a demo</Text>
+                <View className="flex-1 h-px bg-outline-variant" />
+              </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(340).duration(400)}>
-            <SegmentedControl
-              options={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]}
-              value={demoRole}
-              onChange={setDemoRole}
-              className="mb-4"
-            />
-            <Button
-              label={`Continue as ${demoRole === 'teacher' ? 'Teacher' : 'Student'} demo`}
-              variant="secondary"
-              onPress={() => handleLogin(true)}
-              fullWidth
-              accessibilityLabel={`Continue as ${demoRole} demo`}
-            />
-          </Animated.View>
+              <Animated.View entering={FadeInDown.delay(340).duration(400)}>
+                <SegmentedControl
+                  options={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]}
+                  value={demoRole}
+                  onChange={setDemoRole}
+                  className="mb-4"
+                />
+                <Button
+                  label={`Continue as ${demoRole === 'teacher' ? 'Teacher' : 'Student'} demo`}
+                  variant="secondary"
+                  onPress={() => handleLogin(true)}
+                  fullWidth
+                  accessibilityLabel={`Continue as ${demoRole} demo`}
+                />
+              </Animated.View>
+            </>
+          )}
 
           <Animated.View entering={FadeInDown.delay(400).duration(400)} className="items-center mt-8">
             <Pressable onPress={() => router.push('/(auth)/register')} accessibilityRole="button" accessibilityLabel="Create an account">

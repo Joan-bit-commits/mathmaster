@@ -108,7 +108,7 @@ export default function StudentHomeScreen() {
             <View className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-primary opacity-10" />
             <View>
               <Text className="text-[28px] leading-9 font-semibold text-white mb-1">
-                {greeting()}, {user?.first_name || "Alex"} 👋
+                {greeting()}, {user?.first_name || user?.username || 'Student'} 👋
               </Text>
               <Text className="text-[16px] leading-6 text-[#b6c2d2]">
                 Ready to keep your streak alive?
