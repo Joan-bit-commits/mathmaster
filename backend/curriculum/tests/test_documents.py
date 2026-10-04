@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from rest_framework.test import APIClient
 
 from accounts.models import User
 from curriculum.models import Document, DocumentChatSession, DocumentChunk
@@ -70,6 +71,16 @@ class DocumentSessionContinuityTests(TestCase):
         session = DocumentChatSession.objects.create(document=self.document, user=self.user)
         resolved = _resolve_document_session(self.document, self.user, session.id)
         self.assertEqual(resolved.id, session.id)
+
+    def test_session_detail_uses_session_id_url_parameter(self):
+        session = DocumentChatSession.objects.create(document=self.document, user=self.user)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.get(f'/api/documents/{self.document.id}/sessions/{session.id}/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['id'], session.id)
 
     def test_unknown_session_id_creates_a_new_session_instead_of_erroring(self):
         resolved = _resolve_document_session(self.document, self.user, 999999, question='hi')

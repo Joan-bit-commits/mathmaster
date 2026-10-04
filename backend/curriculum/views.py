@@ -26,9 +26,8 @@ from .services import (
     answer_document,
     answer_document_stream,
     extract_past_paper_questions,
-    solve_scanned_problem,
 )
-from .tasks import process_document_task
+from .tasks import process_document_task, solve_scan_task
 from .structure import (
     APPROVED_TEXTBOOKS,
     LOCAL_PROBLEMS,
@@ -275,6 +274,7 @@ class DocumentSessionsView(generics.ListAPIView):
 class DocumentSessionDetailView(generics.RetrieveDestroyAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = DocumentChatSessionSerializer
+    lookup_url_kwarg = 'session_id'
 
     def get_queryset(self):
         return DocumentChatSession.objects.filter(
@@ -289,12 +289,8 @@ class ScanSolveView(APIView):
         serializer = ScanJobCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         scan = serializer.save(user=request.user)
-        try:
-            solve_scanned_problem(scan)
-        except Exception as exc:
-            scan.status = ScanJob.ScanStatus.FAILED
-            scan.error_message = str(exc)
-            scan.save(update_fields=['status', 'error_message'])
+        solve_scan_task.delay(scan.id)
+        scan.refresh_from_db()
         return Response(ScanJobSerializer(scan).data, status=status.HTTP_201_CREATED)
 
 

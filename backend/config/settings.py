@@ -212,7 +212,7 @@ CACHES = {
 }
 
 # ---------------------------------------------------------------------------
-# Celery (background tasks — document/past-paper processing)
+# Celery (background tasks — document, past-paper, and scan processing)
 # ---------------------------------------------------------------------------
 #
 # Redis was already provisioned in docker-compose.yml but wasn't wired to

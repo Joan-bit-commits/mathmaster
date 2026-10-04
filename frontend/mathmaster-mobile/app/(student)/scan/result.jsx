@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { fetchScanJob, submitScan } from "../../../src/services/scan";
+import { fetchScanJob, pollScanUntilProcessed, submitScan } from "../../../src/services/scan";
 import Screen from "../../../src/components/ui/Screen";
 import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import Button from "../../../src/components/ui/Button";
@@ -39,9 +39,13 @@ export default function ScanResult() {
       }
 
       try {
-        const result =
-          shouldSolve && uri ? await submitScan(uri, setProgress) : await fetchScanJob(id);
-        if (!cancelled) setScan(result);
+        const result = shouldSolve && uri ? await submitScan(uri, setProgress) : await fetchScanJob(id);
+        const completed = result?.status !== "ready" && result?.status !== "failed"
+          ? await pollScanUntilProcessed(result.id)
+          : result;
+        if (completed?.status === "failed") throw new Error(completed.error_message || "Couldn't solve this scan.");
+        if (completed?.status !== "ready") throw new Error("This scan is still processing. Please try again shortly.");
+        if (!cancelled) setScan(completed);
       } catch (e) {
         if (!cancelled) setError(e?.message || "Couldn't load this scan.");
       } finally {

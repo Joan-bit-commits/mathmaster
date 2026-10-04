@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from curriculum.services import extract_pages_from_pdf
+from curriculum.services import _pdf_vision_pages
 
 FIXTURE_PDF = Path(__file__).parent / "fixtures" / "covid_paper.pdf"  # 5 pages
 
@@ -15,12 +15,17 @@ class ParallelPageOcrTests(TestCase):
     sequential implementation would also pass ordinary "does it return
     the right text" tests. These specifically prove pages run in
     parallel, the concurrency cap is respected, and a single page's
-    failure doesn't cost the rest of the document."""
+    failure doesn't cost the rest of the document.
 
-    @patch("curriculum.services.gemini_configured", return_value=True)
+    _pdf_vision_pages is phase 2's extraction function (see
+    curriculum/services.py) — it no longer checks gemini_configured()
+    itself (that decision is made by its caller,
+    upgrade_document_with_vision_ocr, before it's ever invoked), so these
+    tests don't need to mock that."""
+
     @patch("curriculum.services._page_to_png_bytes", return_value=b"fake-png-bytes")
     @patch("curriculum.services._ocr_image_bytes")
-    def test_pages_run_concurrently_not_sequentially(self, mock_ocr, _mock_render, _mock_configured):
+    def test_pages_run_concurrently_not_sequentially(self, mock_ocr, _mock_render):
         """5 pages at ~0.2s each would take ~1.0s run sequentially. Run in
         parallel (cap of 5, so all 5 can go at once) it should take
         roughly one page's worth of time, not five.
@@ -38,16 +43,15 @@ class ParallelPageOcrTests(TestCase):
         mock_ocr.side_effect = slow_ocr
         started = time.monotonic()
         with open(FIXTURE_PDF, "rb") as f:
-            pages = extract_pages_from_pdf(f)
+            pages = _pdf_vision_pages(f)
         elapsed = time.monotonic() - started
 
         assert len(pages) == 5
         assert elapsed < 0.6, f"took {elapsed:.2f}s — pages do not appear to be running in parallel"
 
-    @patch("curriculum.services.gemini_configured", return_value=True)
     @patch("curriculum.services.MAX_CONCURRENT_PAGE_OCR", 2)
     @patch("curriculum.services._ocr_image_bytes")
-    def test_concurrency_is_capped(self, mock_ocr, _mock_configured):
+    def test_concurrency_is_capped(self, mock_ocr):
         """With the cap set to 2 (well below the fixture's 5 pages), no
         more than 2 OCR calls should ever be in flight at once."""
         in_flight = 0
@@ -66,13 +70,12 @@ class ParallelPageOcrTests(TestCase):
 
         mock_ocr.side_effect = tracked_ocr
         with open(FIXTURE_PDF, "rb") as f:
-            extract_pages_from_pdf(f)
+            _pdf_vision_pages(f)
 
         assert max_seen == 2, f"observed {max_seen} concurrent calls, expected the cap (2) to be hit exactly"
 
-    @patch("curriculum.services.gemini_configured", return_value=True)
     @patch("curriculum.services._ocr_image_bytes")
-    def test_one_page_failing_does_not_fail_the_whole_document(self, mock_ocr, _mock_configured):
+    def test_one_page_failing_does_not_fail_the_whole_document(self, mock_ocr):
         def flaky_ocr(image_bytes):
             # Fail deterministically on exactly one call by content size
             # proxy isn't reliable across pages of similar size, so use a
@@ -86,7 +89,7 @@ class ParallelPageOcrTests(TestCase):
         mock_ocr.side_effect = flaky_ocr
 
         with open(FIXTURE_PDF, "rb") as f:
-            pages = extract_pages_from_pdf(f)
+            pages = _pdf_vision_pages(f)
 
         assert len(pages) == 5
         failed = [text for _, text in pages if "could not be read" in text]
@@ -96,17 +99,15 @@ class ParallelPageOcrTests(TestCase):
         # Page numbers are still 1..5 in order regardless of which one failed.
         assert [n for n, _ in pages] == [1, 2, 3, 4, 5]
 
-    @patch("curriculum.services.gemini_configured", return_value=True)
     @patch("curriculum.services._ocr_image_bytes")
-    def test_every_page_failing_raises_instead_of_silently_succeeding(self, mock_ocr, _mock_configured):
+    def test_every_page_failing_raises_instead_of_silently_succeeding(self, mock_ocr):
         mock_ocr.side_effect = RuntimeError("Gemini is down")
         with open(FIXTURE_PDF, "rb") as f:
             with self.assertRaises(RuntimeError):
-                extract_pages_from_pdf(f)
+                _pdf_vision_pages(f)
 
-    @patch("curriculum.services.gemini_configured", return_value=True)
     @patch("curriculum.services._ocr_image_bytes")
-    def test_page_order_is_correct_even_when_later_pages_finish_first(self, mock_ocr, _mock_configured):
+    def test_page_order_is_correct_even_when_later_pages_finish_first(self, mock_ocr):
         """Pages complete in whatever order the network calls happen to
         return in — the result must still be ordered by page number, not
         by completion order."""
@@ -124,7 +125,7 @@ class ParallelPageOcrTests(TestCase):
 
         mock_ocr.side_effect = reverse_latency_ocr
         with open(FIXTURE_PDF, "rb") as f:
-            pages = extract_pages_from_pdf(f)
+            pages = _pdf_vision_pages(f)
 
         # Page N's text must correspond to the Nth-submitted call, not to
         # whichever call happened to finish first.

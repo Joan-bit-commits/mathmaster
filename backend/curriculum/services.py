@@ -66,46 +66,48 @@ def _page_to_png_bytes(page, resolution=150):
     return buf.getvalue()
 
 
-def extract_pages_from_pdf(file):
-    """Return a list of (page_number, text) tuples, 1-indexed.
+def _pdf_text_pages(file):
+    """Fast pass: pdfplumber's text layer only, no Gemini calls. Returns a
+    list of (page_number, text) tuples, 1-indexed.
 
     Keeping text per-page (instead of joining everything into one blob)
     is what lets chunks carry an accurate page_number, which in turn is
     what lets answer citations ("[Page 12]") actually mean something.
 
-    IMPORTANT: pdfplumber's extract_text() only reads a PDF's text
-    LAYER — characters that are actually stored as text. Math exam papers
-    converted from Word very often have every formula inserted via an
-    equation editor, which embeds each one as a raster IMAGE with no
-    underlying text at all. pdfplumber silently skips those: the prose
-    around a formula extracts fine, but the formula itself is just gone,
-    with nothing left in its place. For a document that's entirely exam
-    questions, that can mean every single question loses its actual
-    mathematical content while looking like it "worked".
+    This is deliberately just the text layer, even when Gemini is
+    configured — see process_document/upgrade_document_with_vision_ocr
+    for why Vision OCR is now a separate, later phase rather than
+    something this function waits on.
+    """
+    with pdfplumber.open(file) as pdf:
+        return [(index + 1, page.extract_text() or "") for index, page in enumerate(pdf.pages)]
 
-    When Gemini is configured, each page is rendered to an image and
-    read via Vision instead (the same OCR path used for photographed
-    documents) — this reads the page the way a person would, so embedded
-    formula images are captured along with everything else. Only when
-    Gemini isn't configured does this fall back to pdfplumber's text
-    layer, which is degraded (loses embedded-image formulas) but usable
-    for local dev without an API key.
+
+def _pdf_vision_pages(file):
+    """Slow pass: render each page to an image and read it via Gemini
+    Vision. Returns a list of (page_number, text) tuples, 1-indexed.
+
+    IMPORTANT: pdfplumber's extract_text() (the fast pass above) only
+    reads a PDF's text LAYER — characters that are actually stored as
+    text. Math exam papers converted from Word very often have every
+    formula inserted via an equation editor, which embeds each one as a
+    raster IMAGE with no underlying text at all. The fast pass silently
+    skips those: the prose around a formula extracts fine, but the
+    formula itself is just gone. This pass reads the page the way a
+    person would, so embedded formula images are captured too — at the
+    cost of being much slower and rate-limited.
 
     Pages are OCR'd concurrently (bounded by MAX_CONCURRENT_PAGE_OCR)
     rather than one at a time — each call is a network round trip, so
-    running several at once cuts wall-clock processing time roughly in
-    proportion to how many run in parallel, without changing the total
-    number of Gemini calls or tokens billed. A single page's OCR failure
-    doesn't fail the whole document: that page's text becomes a visible
-    "[Page N: could not be read]" marker and every other page still
-    completes normally. Only a total wipeout — every page failing — raises,
-    so the document still gets marked FAILED (and retried by the Celery
-    task) rather than silently "succeeding" with no real content.
+    running several at once cuts wall-clock time roughly in proportion to
+    how many run in parallel, without changing the total number of
+    Gemini calls or tokens billed. A single page's OCR failure doesn't
+    fail the whole pass: that page's text becomes a visible "[Page N:
+    could not be read]" marker and every other page still completes
+    normally. Only a total wipeout — every page failing — raises.
     """
     with pdfplumber.open(file) as pdf:
         pages = list(pdf.pages)
-        if not gemini_configured():
-            return [(index + 1, page.extract_text() or "") for index, page in enumerate(pages)]
         # Rendering needs the pdfplumber/pdfium document to still be open,
         # so this part stays sequential (it's CPU-bound anyway, not the
         # slow part). Only the resulting PNG bytes — plain data, no
@@ -152,14 +154,22 @@ def extract_text_from_image(file):
 
 
 def extract_pages(document):
-    """Dispatch to the right extractor based on the uploaded file type.
+    """Phase-1 (fast) extraction, dispatched by file type.
 
-    Returns a list of (page_number, text) tuples in both cases, so callers
-    (process_document, chunk_pages) don't need to know which path was used.
+    Images have no text layer at all, so Vision OCR IS their phase 1 (and
+    only) pass — there's no faster fallback available for a photograph.
+    A PDF gets the fast pdfplumber text-layer pass here; Vision OCR for a
+    PDF is a separate, later phase — see upgrade_document_with_vision_ocr
+    — not attempted here at all.
     """
     if _is_image_file(document):
+        # No explicit gemini_configured() gate here — extract_text_from_image
+        # (via ask_gemini_vision_text) already raises its own clear
+        # RuntimeError if the API key isn't configured, so an extra check
+        # here would just be a second, differently-worded way of saying
+        # the same thing.
         return [(1, extract_text_from_image(document.file))]
-    return extract_pages_from_pdf(document.file)
+    return _pdf_text_pages(document.file)
 
 
 # ---------------------------------------------------------------------------
@@ -230,8 +240,33 @@ def _detect_level(text, title):
     return ""
 
 
+def _document_subject(text):
+    return "Mathematics" if re.search(r"algebra|equation|geometry|mathematics", text, re.I) else ""
+
+
 # ---------------------------------------------------------------------------
 # Document processing
+#
+# Split into two phases:
+#   1. process_document() — fast, synchronous, no external API calls for a
+#      PDF (pdfplumber's text layer only). Marks the document READY and
+#      creates chunks immediately, so Q&A — and therefore
+#      DocumentChatSession creation — works right away.
+#   2. upgrade_document_with_vision_ocr() — slow, rate-limited, runs after
+#      phase 1 (see tasks.py, which chains the two) and replaces phase 1's
+#      chunks with the richer Vision-OCR'd version once it's ready.
+#
+# Previously this was one function that ran Vision OCR on every PDF page
+# inline before EVER creating a chunk or marking the document READY. For a
+# multi-page document under free-tier rate limits (5 RPM observed), that
+# meant nothing was usable — no chunks, no citations, no working Q&A, and
+# critically no DocumentChatSession ever got created, since
+# retrieve_relevant_chunks() has nothing to return before any chunk exists
+# — until every page's Vision call finished, which could take minutes. A
+# Vision OCR failure also took the whole document down with it. Splitting
+# this into two phases means a document is usable within seconds of
+# upload, and a Vision OCR failure just leaves the text-layer version in
+# place instead of losing the document's content entirely.
 # ---------------------------------------------------------------------------
 
 
@@ -249,11 +284,7 @@ def process_document(document):
         document.extracted_text = text
         document.page_count = len(pages)
         document.detected_level = _detect_level(text, document.title)
-        document.detected_subject = (
-            "Mathematics"
-            if re.search(r"algebra|equation|geometry|mathematics", text, re.I)
-            else ""
-        )
+        document.detected_subject = _document_subject(text)
         document.chunks.all().delete()
         DocumentChunk.objects.bulk_create(
             [DocumentChunk(document=document, **chunk) for chunk in chunk_pages(pages)]
@@ -269,6 +300,45 @@ def process_document(document):
             update_fields=["processing_status", "processing_error", "updated_at"]
         )
         raise
+
+
+def upgrade_document_with_vision_ocr(document):
+    """Phase 2, PDF documents only: re-extracts the document via Gemini
+    Vision (reading embedded formula images the text layer can't see) and
+    replaces phase 1's chunks with the richer version.
+
+    Deliberately does not touch processing_status — the document was
+    already usable after phase 1, and this should read as a silent
+    quality upgrade, not a second round of "processing" that could make
+    the UI flicker back to a loading state. If Vision OCR fails entirely
+    (rate limit exhausted, API outage), phase 1's text-layer content is
+    left in place rather than failing the document — this is the whole
+    point of the split: a Vision OCR failure no longer costs the document
+    its only content.
+    """
+    if _is_image_file(document):
+        return  # images only ever have the one (Vision) pass — see extract_pages
+    if not gemini_configured():
+        return
+
+    try:
+        pages = _pdf_vision_pages(document.file)
+    except Exception:
+        logger.exception(
+            "Vision OCR upgrade failed for document %s — keeping the text-layer version.", document.id
+        )
+        return
+
+    text = "\n\n".join(page_text for _, page_text in pages)
+    document.extracted_text = text
+    document.detected_level = _detect_level(text, document.title)
+    document.detected_subject = _document_subject(text)
+    document.used_vision_ocr = True
+    document.chunks.all().delete()
+    DocumentChunk.objects.bulk_create(
+        [DocumentChunk(document=document, **chunk) for chunk in chunk_pages(pages)]
+    )
+    document.save()
 
 
 def retrieve_relevant_chunks(document, question, top_k=5):
@@ -621,4 +691,3 @@ def extract_past_paper_questions(document):
             }
         )
     return normalized
-

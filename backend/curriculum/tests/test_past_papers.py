@@ -25,7 +25,7 @@ class PastPaperUploadTests(TestCase):
         api.force_authenticate(user=self.teacher)
         return api
 
-    @patch('curriculum.services.extract_pages_from_pdf', return_value=[(1, 'Q1. Solve 2x+5=13.')])
+    @patch('curriculum.services._pdf_text_pages', return_value=[(1, 'Q1. Solve 2x+5=13.')])
     def test_upload_is_processed_and_typed_as_past_paper(self, _mock_extract):
         resp = self.client_.post(
             '/api/teacher/past-papers/',
