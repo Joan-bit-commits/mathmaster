@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from utils.geogebra import extract_geogebra
+from utils.prompts import REFUSAL_PHRASE
+
 from .models import ChatMessage, ChatSession
 
 
@@ -11,10 +14,48 @@ class AITutorRequestSerializer(serializers.Serializer):
     session_id = serializers.IntegerField(required=False)
 
 
+class GeoGebraPayloadSerializer(serializers.Serializer):
+    """Read-only shape of the validated GeoGebra sketch payload."""
+
+    view = serializers.ChoiceField(choices=('2D', '3D'))
+    title = serializers.CharField()
+    commands = serializers.ListField(child=serializers.CharField())
+    axes = serializers.BooleanField(required=False)
+    grid = serializers.BooleanField(required=False)
+    x_min = serializers.FloatField(required=False)
+    x_max = serializers.FloatField(required=False)
+    y_min = serializers.FloatField(required=False)
+    y_max = serializers.FloatField(required=False)
+    x_label = serializers.CharField(required=False, allow_blank=True)
+    y_label = serializers.CharField(required=False, allow_blank=True)
+    z_label = serializers.CharField(required=False, allow_blank=True)
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
+    content = serializers.SerializerMethodField()
+    geogebra = serializers.SerializerMethodField()
+    is_refusal = serializers.SerializerMethodField()
+
     class Meta:
         model = ChatMessage
-        fields = ('id', 'role', 'content', 'created_at')
+        fields = ('id', 'role', 'content', 'geogebra', 'is_refusal', 'created_at')
+
+    def get_geogebra(self, obj):
+        if obj.role != 'assistant':
+            return None
+        _visible, geogebra = extract_geogebra(obj.content)
+        return geogebra
+
+    def get_content(self, obj):
+        """Present the visible answer with the [GEOGEBRA_DATA] tag stripped
+        (the raw content is persisted so the sketch data survives)."""
+        if obj.role != 'assistant':
+            return obj.content
+        visible, _geogebra = extract_geogebra(obj.content)
+        return visible
+
+    def get_is_refusal(self, obj):
+        return obj.role == 'assistant' and obj.content.strip().startswith(REFUSAL_PHRASE)
 
 
 class ChatSessionSerializer(serializers.ModelSerializer):
