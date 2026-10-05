@@ -68,12 +68,22 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
+from corsheaders.defaults import default_headers
+from decouple import Csv
+
 # CORS: explicit allow-list. No CORS_ALLOW_ALL_ORIGINS in any environment.
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:5173,http://127.0.0.1:5173',
     cast=Csv(),
 )
+
+# The API client sends X-School-Id on every request (multi-tenant context),
+# so the preflight allow-list must include it or every school-scoped call
+# fails with "header 'x-school-id' is not allowed".
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-school-id',
+]
 
 ROOT_URLCONF = 'config.urls'
 
