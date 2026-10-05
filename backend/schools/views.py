@@ -14,7 +14,11 @@ from memberships.permissions import IsSchoolAdmin
 from memberships.serializers import MembershipSerializer
 
 from .models import ClassCode, School
-from .serializers import ClassCodeSerializer, SchoolSerializer
+from .serializers import (
+    ClassCodeSerializer,
+    SchoolDetailSerializer,
+    SchoolSerializer,
+)
 
 
 class SchoolViewSet(viewsets.ModelViewSet):
@@ -25,6 +29,11 @@ class SchoolViewSet(viewsets.ModelViewSet):
         return School.objects.filter(
             memberships__user=self.request.user, memberships__is_active=True
         ).distinct()
+
+    def get_serializer_class(self):
+        # Detail responses carry the subscription fields (logo_url,
+        # trial_ends_at, current_period_end) the web settings pages read.
+        return SchoolDetailSerializer if self.action == 'retrieve' else super().get_serializer_class()
 
     def get_permissions(self):
         return (

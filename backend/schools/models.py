@@ -105,3 +105,22 @@ class ClassCode(models.Model):
             and (not self.expires_at or self.expires_at >= timezone.now())
             and (self.max_uses is None or self.current_uses < self.max_uses)
         )
+
+
+class AuditLog(models.Model):
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='audit_logs')
+    actor = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='audit_actions'
+    )
+    action = models.CharField(max_length=100)
+    target = models.CharField(max_length=200, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['school', 'created_at']), models.Index(fields=['school', 'action'])]
+
+    def __str__(self):
+        actor = self.actor.get_full_name() if self.actor else 'system'
+        return f'{actor} {self.action} {self.target}'.strip()
