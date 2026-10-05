@@ -9,13 +9,16 @@ from learning.models import Attempt, Lesson, Question, Quiz, Topic
 
 
 @pytest.fixture
-def curriculum(db, django_user_model):
+def curriculum(db, django_user_model, student):
     teacher = django_user_model.objects.create_user(username='tt', password='Str0ngPass!', role='teacher')
-    topic = Topic.objects.create(name='Algebra', description='D', level='S1', subject='Mathematics')
-    lesson = Lesson.objects.create(topic=topic, title='L1', content='C')
-    quiz = Quiz.objects.create(lesson=lesson, title='Q1', description='D')
-    q1 = Question.objects.create(quiz=quiz, question_text='1+1?', choices=['2'], correct_answer='2')
-    q2 = Question.objects.create(quiz=quiz, question_text='2+2?', choices=['4'], correct_answer='4')
+    from memberships.models import Membership
+    school = student.current_school
+    Membership.objects.create(user=teacher, school=school, role='teacher')
+    topic = Topic.objects.create(name='Algebra', description='D', level='S1', subject='Mathematics', school=school)
+    lesson = Lesson.objects.create(topic=topic, school=school, title='L1', content='C')
+    quiz = Quiz.objects.create(lesson=lesson, school=school, title='Q1', description='D')
+    q1 = Question.objects.create(quiz=quiz, school=school, question_text='1+1?', choices=['2'], correct_answer='2')
+    q2 = Question.objects.create(quiz=quiz, school=school, question_text='2+2?', choices=['4'], correct_answer='4')
     return {'teacher': teacher, 'topic': topic, 'lesson': lesson, 'quiz': quiz, 'q1': q1, 'q2': q2}
 
 

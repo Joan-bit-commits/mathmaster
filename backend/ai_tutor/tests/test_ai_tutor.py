@@ -34,10 +34,10 @@ class TestChatSessions:
         assert resp.status_code == 401
 
     def test_lists_only_the_current_users_sessions(self, student_client, student, teacher):
-        mine = ChatSession.objects.create(student=student, topic='Algebra')
-        ChatMessage.objects.create(session=mine, role='user', content='What is 2x=8?')
-        ChatMessage.objects.create(session=mine, role='assistant', content='x = 4')
-        ChatSession.objects.create(student=teacher, topic='Geometry')
+        mine = ChatSession.objects.create(student=student, school=student.current_school, topic='Algebra')
+        ChatMessage.objects.create(session=mine, school=mine.school, role='user', content='What is 2x=8?')
+        ChatMessage.objects.create(session=mine, school=mine.school, role='assistant', content='x = 4')
+        ChatSession.objects.create(student=teacher, school=teacher.current_school, topic='Geometry')
 
         resp = student_client.get('/api/ai-tutor/sessions/')
         assert resp.status_code == 200
@@ -48,9 +48,9 @@ class TestChatSessions:
         assert results[0]['title'] == 'What is 2x=8?'
 
     def test_detail_view_includes_messages_and_is_scoped_to_owner(self, student_client, student, teacher):
-        mine = ChatSession.objects.create(student=student, topic='Algebra')
-        ChatMessage.objects.create(session=mine, role='user', content='Hi')
-        others = ChatSession.objects.create(student=teacher, topic='Geometry')
+        mine = ChatSession.objects.create(student=student, school=student.current_school, topic='Algebra')
+        ChatMessage.objects.create(session=mine, school=mine.school, role='user', content='Hi')
+        others = ChatSession.objects.create(student=teacher, school=teacher.current_school, topic='Geometry')
 
         resp = student_client.get(f'/api/ai-tutor/sessions/{mine.id}/')
         assert resp.status_code == 200
@@ -89,8 +89,9 @@ class TestAITutorAsk:
     def test_history_passed_to_gemini(self, student_client, gemini_mock):
         first = self._ask(student_client)
         session_id = first.data['session_id']
-        ChatMessage.objects.create(session_id=session_id, role='user', content='previous question')
-        ChatMessage.objects.create(session_id=session_id, role='assistant', content='previous answer')
+        session = ChatSession.objects.get(id=session_id)
+        ChatMessage.objects.create(session=session, school=session.school, role='user', content='previous question')
+        ChatMessage.objects.create(session=session, school=session.school, role='assistant', content='previous answer')
         self._ask(student_client, session_id=session_id, question='Why?')
         args, kwargs = gemini_mock.call_args
         history = kwargs.get('history') or (args[1] if len(args) > 1 else [])

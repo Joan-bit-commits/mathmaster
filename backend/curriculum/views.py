@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -27,7 +27,6 @@ from .services import (
     answer_document_stream,
     extract_past_paper_questions,
 )
-from .tasks import process_document_task, solve_scan_task
 from .structure import (
     APPROVED_TEXTBOOKS,
     LOCAL_PROBLEMS,
@@ -39,6 +38,7 @@ from .structure import (
     get_strand,
     search_objectives,
 )
+from .tasks import process_document_task, solve_scan_task
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,10 @@ class DocumentListCreateView(generics.ListCreateAPIView):
     queryset = Document.objects.all()
 
     def get_queryset(self):
-        return self.queryset.filter(owner=self.request.user)
+        return self.queryset.filter(owner=self.request.user, school=self._school())
+
+    def _school(self):
+        return getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
 
     def get_serializer_class(self):
         return DocumentUploadSerializer if self.request.method == 'POST' else DocumentSerializer
@@ -129,7 +132,10 @@ class DocumentListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         uploaded = self.request.FILES['file']
-        document = serializer.save(owner=self.request.user, file_size=uploaded.size)
+        school = self._school()
+        if school is None:
+            raise serializers.ValidationError({'school': 'No active school in request or user'})
+        document = serializer.save(owner=self.request.user, school=school, file_size=uploaded.size)
         # The mobile app has no separate "process this document" step — it
         # uploads, then immediately navigates to the detail screen expecting
         # content. Previously nothing ever called process_document() unless
@@ -177,14 +183,16 @@ class DocumentDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = DocumentSerializer
 
     def get_queryset(self):
-        return Document.objects.filter(owner=self.request.user)
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return Document.objects.filter(owner=self.request.user, school=school)
 
 
 class DocumentProcessView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        document = get_object_or_404(Document, pk=pk, owner=request.user)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(Document, pk=pk, owner=request.user, school=school)
         # Same dispatch-via-task pattern as the upload views — no
         # transaction.on_commit() needed here since the document row
         # already exists from a prior, already-committed request. Same
@@ -203,7 +211,8 @@ class DocumentChunksView(generics.ListAPIView):
     serializer_class = DocumentChunkSerializer
 
     def get_queryset(self):
-        return Document.objects.get(pk=self.kwargs['pk'], owner=self.request.user).chunks.all()
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return Document.objects.get(pk=self.kwargs['pk'], owner=self.request.user, school=school).chunks.all()
 
 
 class DocumentChunkDetailView(generics.RetrieveAPIView):
@@ -211,9 +220,10 @@ class DocumentChunkDetailView(generics.RetrieveAPIView):
     serializer_class = DocumentChunkSerializer
 
     def get_queryset(self):
-        return Document.objects.get(pk=self.kwargs['pk'], owner=self.request.user).chunks.filter(
-            pk=self.kwargs['chunk_id']
-        )
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return Document.objects.get(
+            pk=self.kwargs['pk'], owner=self.request.user, school=school
+        ).chunks.filter(pk=self.kwargs['chunk_id'])
 
 
 class DocumentAskView(APIView):
@@ -222,7 +232,8 @@ class DocumentAskView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        document = get_object_or_404(Document, pk=pk, owner=request.user)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(Document, pk=pk, owner=request.user, school=school)
         record, _ = answer_document(
             document,
             request.data.get('question', ''),
@@ -248,7 +259,8 @@ class DocumentAskStreamView(APIView):
     renderer_classes = [ServerSentEventRenderer, JSONRenderer]
 
     def post(self, request, pk):
-        document = get_object_or_404(Document, pk=pk, owner=request.user)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(Document, pk=pk, owner=request.user, school=school)
         response = StreamingHttpResponse(
             answer_document_stream(
                 document,
@@ -268,7 +280,10 @@ class DocumentSessionsView(generics.ListAPIView):
     serializer_class = DocumentChatSessionSerializer
 
     def get_queryset(self):
-        return DocumentChatSession.objects.filter(document_id=self.kwargs['pk'], user=self.request.user)
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return DocumentChatSession.objects.filter(
+            document_id=self.kwargs['pk'], user=self.request.user, school=school
+        )
 
 
 class DocumentSessionDetailView(generics.RetrieveDestroyAPIView):
@@ -277,8 +292,9 @@ class DocumentSessionDetailView(generics.RetrieveDestroyAPIView):
     lookup_url_kwarg = 'session_id'
 
     def get_queryset(self):
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
         return DocumentChatSession.objects.filter(
-            document_id=self.kwargs['pk'], user=self.request.user, id=self.kwargs['session_id']
+            document_id=self.kwargs['pk'], user=self.request.user, school=school, id=self.kwargs['session_id']
         )
 
 
@@ -288,7 +304,10 @@ class ScanSolveView(APIView):
     def post(self, request):
         serializer = ScanJobCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        scan = serializer.save(user=request.user)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        if school is None:
+            raise serializers.ValidationError({'school': 'No active school in request or user'})
+        scan = serializer.save(user=request.user, school=school)
         solve_scan_task.delay(scan.id)
         scan.refresh_from_db()
         return Response(ScanJobSerializer(scan).data, status=status.HTTP_201_CREATED)
@@ -299,7 +318,8 @@ class ScanHistoryView(generics.ListAPIView):
     serializer_class = ScanJobSerializer
 
     def get_queryset(self):
-        return ScanJob.objects.filter(user=self.request.user)
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return ScanJob.objects.filter(user=self.request.user, school=school)
 
 
 class ScanJobDetailView(generics.RetrieveAPIView):
@@ -307,7 +327,8 @@ class ScanJobDetailView(generics.RetrieveAPIView):
     serializer_class = ScanJobSerializer
 
     def get_queryset(self):
-        return ScanJob.objects.filter(user=self.request.user)
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return ScanJob.objects.filter(user=self.request.user, school=school)
 
 
 class PastPaperUploadView(DocumentListCreateView):
@@ -315,8 +336,14 @@ class PastPaperUploadView(DocumentListCreateView):
 
     def perform_create(self, serializer):
         uploaded = self.request.FILES['file']
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        if school is None:
+            raise serializers.ValidationError({'school': 'No active school in request or user'})
         document = serializer.save(
-            owner=self.request.user, file_size=uploaded.size, document_type=Document.DocumentType.PAST_PAPER
+            owner=self.request.user,
+            school=school,
+            file_size=uploaded.size,
+            document_type=Document.DocumentType.PAST_PAPER,
         )
         # This override replaces DocumentListCreateView.perform_create()
         # entirely (it needs to set document_type), which means it was
@@ -336,8 +363,14 @@ class PastPaperExtractView(APIView):
     permission_classes = [IsStaffMember]
 
     def get(self, request, pk):
-        document = get_object_or_404(Document, pk=pk, document_type=Document.DocumentType.PAST_PAPER)
-        if document.processing_status in (Document.ProcessingStatus.PENDING, Document.ProcessingStatus.PROCESSING):
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(
+            Document, pk=pk, school=school, document_type=Document.DocumentType.PAST_PAPER
+        )
+        if document.processing_status in (
+            Document.ProcessingStatus.PENDING,
+            Document.ProcessingStatus.PROCESSING,
+        ):
             return Response({'detail': 'This paper is still processing. Try again shortly.'}, status=409)
         if document.processing_status == Document.ProcessingStatus.FAILED:
             return Response(
@@ -359,7 +392,10 @@ class PastPaperSaveQuizView(APIView):
     def post(self, request, pk):
         from learning.models import Lesson, Question, Quiz
 
-        document = get_object_or_404(Document, pk=pk, document_type=Document.DocumentType.PAST_PAPER)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(
+            Document, pk=pk, school=school, document_type=Document.DocumentType.PAST_PAPER
+        )
         lesson_id = request.data.get('lesson_id')
         questions = request.data.get('questions')
         if not lesson_id:
@@ -367,11 +403,12 @@ class PastPaperSaveQuizView(APIView):
         if not isinstance(questions, list) or not questions:
             return Response({'detail': 'At least one question is required.'}, status=400)
 
-        lesson = get_object_or_404(Lesson, pk=lesson_id)
+        lesson = get_object_or_404(Lesson, pk=lesson_id, school=school)
 
         with transaction.atomic():
             quiz = Quiz.objects.create(
                 lesson=lesson,
+                school=school,
                 title=request.data.get('title') or f'{document.title} — Quiz',
                 description=f'Generated from past paper "{document.title}".',
                 created_by=request.user,
@@ -387,6 +424,7 @@ class PastPaperSaveQuizView(APIView):
                 created.append(
                     Question(
                         quiz=quiz,
+                        school=school,
                         question_text=question_text,
                         choices=[str(c) for c in choices],
                         correct_answer=str(item.get('correct_answer') or ''),

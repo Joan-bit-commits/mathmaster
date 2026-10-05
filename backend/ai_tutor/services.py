@@ -44,10 +44,24 @@ def _cache_key(topic: str, question: str, level: str) -> str:
     return f'ai-tutor:{digest}'
 
 
-def _history_for_session(session_id: int | None, student):
+def _resolve_school(request):
+    school = getattr(request, 'school', None)
+    if school is not None:
+        return school
+    current_school = getattr(request.user, 'current_school', None)
+    if current_school is not None:
+        return current_school
+    membership = request.user.memberships.filter(is_active=True).select_related('school').first()
+    return membership.school if membership else None
+
+
+def _history_for_session(session_id: int | None, student, school=None):
     if not session_id:
         return None, []
-    session = ChatSession.objects.filter(id=session_id, student=student).first()
+    queryset = ChatSession.objects.filter(id=session_id, student=student)
+    if school is not None:
+        queryset = queryset.filter(school=school)
+    session = queryset.first()
     if not session:
         return None, []
     messages = list(session.messages.all())[-HISTORY_WINDOW:]
@@ -56,8 +70,8 @@ def _history_for_session(session_id: int | None, student):
 
 
 def _persist_messages(session, question: str, answer: str):
-    ChatMessage.objects.create(session=session, role='user', content=question)
-    ChatMessage.objects.create(session=session, role='assistant', content=answer)
+    ChatMessage.objects.create(session=session, school=session.school, role='user', content=question)
+    ChatMessage.objects.create(session=session, school=session.school, role='assistant', content=answer)
 
 
 def _get_answer(request, data):
@@ -141,10 +155,12 @@ def run_ask(request, data):
     topic, level, session_id, source, cache_hit = _get_answer(request, data)
     question = sanitize_text(data['question'])
 
+    school = _resolve_school(request)
+    session, history = _history_for_session(session_id, request.user, school=school)
+
     if cache_hit:
         answer = source
     else:
-        session, history = _history_for_session(session_id, request.user)
         try:
             answer = ask_gemini(source[0], history=history)
         except Exception as exc:
@@ -153,11 +169,17 @@ def run_ask(request, data):
             return _error_payload(code, message), status, False
         cache.set(_cache_key(topic, question, level), answer, CACHE_TTL_SECONDS)
 
-    session, _ = _history_for_session(session_id, request.user)
     if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
+        session = ChatSession.objects.create(
+            student=request.user, school=school, topic=topic, title=question[:200]
+        )
     _persist_messages(session, question, answer)
-    track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
+    track_event(
+        request.user,
+        'ai_tutor_ask',
+        school=school,
+        metadata={'topic': topic, 'session_id': session.id},
+    )
 
     return (
         {
@@ -187,12 +209,14 @@ def run_ask_stream(request, data):
     key = _cache_key(topic, question, level)
     cached = cache.get(key)
 
+    school = _resolve_school(request)
+    session, history = _history_for_session(session_id, request.user, school=school)
+
     if cached:
         answer = cached
         for token in _chunk(answer):
             yield f'data: {json.dumps({"token": token})}\n\n'
     else:
-        session, history = _history_for_session(session_id, request.user)
         prompt = math_tutor_prompt(topic=topic, question=question, level=level, context=context)
         try:
             chunks = []
@@ -210,11 +234,17 @@ def run_ask_stream(request, data):
             yield _sse_error(code, message)
             return
 
-    session, _ = _history_for_session(session_id, request.user)
     if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
+        session = ChatSession.objects.create(
+            student=request.user, school=school, topic=topic, title=question[:200]
+        )
     _persist_messages(session, question, answer)
-    track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
+    track_event(
+        request.user,
+        'ai_tutor_ask',
+        school=school,
+        metadata={'topic': topic, 'session_id': session.id},
+    )
 
     yield f'event: done\ndata: {json.dumps({"session_id": session.id})}\n\n'
 

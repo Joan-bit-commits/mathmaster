@@ -152,7 +152,7 @@ class QuestionBulkCreateView(APIView):
         serializer = BulkQuestionListSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         questions = serializer.validated_data['questions']
-        created = [Question(quiz=quiz, created_by=request.user, **q) for q in questions]
+        created = [Question(quiz=quiz, school=quiz.school, created_by=request.user, **q) for q in questions]
         with transaction.atomic():
             Question.objects.bulk_create(created)
         return Response(
@@ -203,9 +203,11 @@ class AttemptCreateView(APIView):
         score = (correct / total * 100) if total > 0 else 0
         with transaction.atomic():
             attempt = Attempt.objects.create(student=request.user, quiz=quiz, score=score)
-            transaction.on_commit(lambda: generate_recommendations(request.user))
+            transaction.on_commit(
+                lambda: generate_recommendations(request.user, school=getattr(request, 'school', None))
+            )
 
-        track_event(request.user, 'quiz_submit', quiz=quiz)
+        track_event(request.user, 'quiz_submit', quiz=quiz, school=getattr(request, 'school', None))
         serializer = AttemptSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

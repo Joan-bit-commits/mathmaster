@@ -1,6 +1,6 @@
 """Analytics services: recommendations and summary aggregation."""
 
-from datetime import timedelta, date
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.db.models import Avg, Count, F, Max
@@ -14,15 +14,35 @@ PERIODS = {'7d': 7, '30d': 30}
 
 
 def track_event(
-    student, event_type, topic=None, lesson=None, quiz=None, question=None, metadata=None, commit_streak=True
+    student,
+    event_type,
+    topic=None,
+    lesson=None,
+    quiz=None,
+    question=None,
+    school=None,
+    metadata=None,
+    commit_streak=True,
 ):
     """Record a LearningEvent and bump the student's DailyStreak row.
 
     Pass commit_streak=False for event types that shouldn't count as activity
     (currently none, so defaults to True). Returns the created event.
     """
+    if school is None:
+        for related in (topic, lesson, quiz, question):
+            if related is not None and getattr(related, 'school_id', None):
+                school = related.school
+                break
+    if school is None:
+        membership = student.memberships.filter(is_active=True).select_related('school').first()
+        school = membership.school if membership else getattr(student, 'current_school', None)
+    if school is None:
+        return None
+
     event = LearningEvent.objects.create(
         student=student,
+        school=school,
         event_type=event_type,
         topic=topic,
         lesson=lesson,
@@ -31,7 +51,7 @@ def track_event(
         metadata=metadata or {},
     )
     if commit_streak:
-        streak, _ = DailyStreak.objects.get_or_create(student=student, date=date.today())
+        streak, _ = DailyStreak.objects.get_or_create(student=student, school=school, date=date.today())
         update_fields = []
         if event_type == 'lesson_complete':
             streak.lessons_completed = F('lessons_completed') + 1
@@ -43,44 +63,6 @@ def track_event(
         if update_fields:
             streak.save(update_fields=update_fields)
     return event
-
-
-
-def generate_recommendations(student):
-    """Rule-based v1: topics with avg score < threshold and >= 1 attempt,
-    capped and ordered by lowest score. Replaces this student's active set."""
-    from learning.models import Topic
-
-    threshold = settings.RECOMMENDATION_MIN_AVG_SCORE
-    max_items = settings.RECOMMENDATION_MAX_ITEMS
-
-    per_topic = (
-        Attempt.objects.filter(student=student)
-        .values('quiz__lesson__topic')
-        .annotate(avg_score=Avg('score'), attempts=Count('id'))
-        .filter(attempts__gte=1, avg_score__lt=threshold)
-        .order_by('avg_score')[:max_items]
-    )
-
-    Recommendation.objects.filter(student=student).delete()
-    recs = []
-    for row in per_topic:
-        topic = Topic.objects.filter(id=row['quiz__lesson__topic']).first()
-        if topic is None:
-            continue
-        recs.append(
-            Recommendation(
-                student=student,
-                topic=topic,
-                average_score=round(row['avg_score'], 1),
-                recommendation_text=(
-                    f'Revise "{topic.name}" — your average score is '
-                    f'{row["avg_score"]:.0f}%. Work through the lessons and retry the quiz.'
-                ),
-            )
-        )
-    Recommendation.objects.bulk_create(recs)
-    return recs
 
 
 def _streak_count(student) -> int:

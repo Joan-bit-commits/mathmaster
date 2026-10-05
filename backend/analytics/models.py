@@ -2,9 +2,11 @@ from django.conf import settings
 from django.db import models
 
 from learning.models import Lesson, Question, Quiz, Topic
+from schools.managers import SchoolScopedManager
 
 
 class LearningEvent(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='learning_events')
     EVENT_TYPES = [
         ('lesson_view', 'Lesson View'),
         ('lesson_complete', 'Lesson Complete'),
@@ -38,10 +40,13 @@ class LearningEvent(models.Model):
     def __str__(self):
         return f'{self.student.username} {self.event_type} @ {self.created_at}'
 
+    objects = SchoolScopedManager()
+
 
 class DailyStreak(models.Model):
     """Denormalized per-day activity for fast streak/summary reads."""
 
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='daily_streaks')
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -52,14 +57,19 @@ class DailyStreak(models.Model):
     quizzes_passed = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ('student', 'date')
+        constraints = [
+            models.UniqueConstraint(fields=['student', 'school', 'date'], name='unique_student_school_streak_date')
+        ]
         ordering = ['-date']
 
     def __str__(self):
         return f'{self.student.username} {self.date}: {self.lessons_completed}L/{self.quizzes_passed}Q'
 
+    objects = SchoolScopedManager()
+
 
 class Performance(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='performances')
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -72,8 +82,11 @@ class Performance(models.Model):
     def __str__(self):
         return f'{self.student.username} - {self.topic.name} - {self.average_score}'
 
+    objects = SchoolScopedManager()
+
 
 class Recommendation(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='recommendations')
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -86,3 +99,5 @@ class Recommendation(models.Model):
 
     def __str__(self):
         return f'Recommendation for {self.student.username}: {self.recommendation_text}'
+
+    objects = SchoolScopedManager()

@@ -35,6 +35,7 @@ class EventCreateView(APIView):
             lesson=serializer.validated_data.get('lesson'),
             quiz=serializer.validated_data.get('quiz'),
             question=serializer.validated_data.get('question'),
+            school=getattr(request, 'school', None),
             metadata=serializer.validated_data.get('metadata') or {},
         )
         return Response({'id': event.id}, status=status.HTTP_201_CREATED)
@@ -65,7 +66,8 @@ class RecommendationListView(APIView):
     """GET /api/analytics/recommendations/ — active (non-expired) recommendations."""
 
     def get(self, request):
-        recs = get_active_recommendations(request.user)
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        recs = get_active_recommendations(request.user, school=school)
         return Response(RecommendationSerializer(recs, many=True).data)
 
 

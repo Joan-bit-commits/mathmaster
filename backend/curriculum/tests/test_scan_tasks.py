@@ -6,6 +6,8 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from accounts.models import User
+from memberships.models import Membership
+from schools.models import School
 from curriculum.models import ScanJob
 from curriculum.tasks import solve_scan_task
 
@@ -18,6 +20,10 @@ JPEG_BYTES = b64decode(
 class ScanTaskTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='scan-task-user', password='StrongPass1!')
+        self.school = School.objects.create(name='Scan School', slug='scan-school', contact_email='scan@example.com', created_by=self.user)
+        Membership.objects.create(user=self.user, school=self.school, role='owner')
+        self.user.current_school = self.school
+        self.user.save(update_fields=['current_school'])
         self.client.force_authenticate(self.user)
 
     @patch('curriculum.views.solve_scan_task.delay')

@@ -25,6 +25,7 @@ LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.0.148', cast=Csv())
 if DEBUG:
     ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['testserver']
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -44,6 +45,11 @@ INSTALLED_APPS = [
     'analytics',
     'ai_tutor',
     'curriculum',
+    'schools.apps.SchoolsConfig',
+    'memberships.apps.MembershipsConfig',
+    'billing.apps.BillingConfig',
+    'invitations.apps.InvitationsConfig',
+    'classes.apps.ClassesConfig',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'schools.middleware.TenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'analytics.middleware.AnalyticsMiddleware',
@@ -199,6 +206,16 @@ GENAI_API_KEY = config('GENAI_API_KEY', default='')
 GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.6-flash')
 GEMINI_RATE_LIMIT_RPM = config('GEMINI_RATE_LIMIT_RPM', default=5, cast=int)
 
+# ---------------------------------------------------------------------------
+# Billing / tenancy
+# ---------------------------------------------------------------------------
+
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
+DEFAULT_TRIAL_DAYS = config('DEFAULT_TRIAL_DAYS', default=14, cast=int)
+DEFAULT_CURRENCY = config('DEFAULT_CURRENCY', default='USD')
+
 
 # ---------------------------------------------------------------------------
 # Cache (LocMemCache for dev; swap for Redis in production)
@@ -234,7 +251,9 @@ REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=True, cast=bool)
-CELERY_TASK_EAGER_PROPAGATES = True  # surface task exceptions immediately in eager mode instead of swallowing them
+CELERY_TASK_EAGER_PROPAGATES = (
+    True  # surface task exceptions immediately in eager mode instead of swallowing them
+)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

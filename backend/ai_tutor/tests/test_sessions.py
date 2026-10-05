@@ -2,14 +2,30 @@ import pytest
 from rest_framework import status
 
 from ai_tutor.models import ChatMessage, ChatSession
+from memberships.models import Membership
+from schools.models import School
 
 
 @pytest.mark.django_db
 class TestChatSessions:
+    def setup_method(self):
+        from accounts.models import User
+
+        self.user = User.objects.create_user(username='session-owner', password='StrongPass1!')
+        self.school = School.objects.create(
+            name='Session School',
+            slug='session-school',
+            contact_email='session@example.com',
+            created_by=self.user,
+        )
+        Membership.objects.create(user=self.user, school=self.school, role='owner')
+        self.user.current_school = self.school
+        self.user.save(update_fields=['current_school'])
+
     def _make_session(self, user, topic='Algebra', title='Test chat'):
-        session = ChatSession.objects.create(student=user, topic=topic, title=title)
-        ChatMessage.objects.create(session=session, role='user', content='Hello')
-        ChatMessage.objects.create(session=session, role='assistant', content='Hi there!')
+        session = ChatSession.objects.create(student=user, school=user.current_school, topic=topic, title=title)
+        ChatMessage.objects.create(session=session, school=session.school, role='user', content='Hello')
+        ChatMessage.objects.create(session=session, school=session.school, role='assistant', content='Hi there!')
         return session
 
     def test_list_sessions_empty(self, student_client):
@@ -42,7 +58,11 @@ class TestChatSessions:
         assert response.data['messages'][0]['role'] == 'user'
 
     def test_cannot_see_other_users_sessions(self, student_client, teacher):
-        session = ChatSession.objects.create(student=teacher, topic='Algebra')
+        school = School.objects.create(name='Teacher School', slug='teacher-session-school', contact_email='teacher@example.com', created_by=teacher)
+        Membership.objects.create(user=teacher, school=school, role='owner')
+        teacher.current_school = school
+        teacher.save(update_fields=['current_school'])
+        session = ChatSession.objects.create(student=teacher, school=school, topic='Algebra')
 
         response = student_client.get(f'/api/ai-tutor/sessions/{session.id}/')
 

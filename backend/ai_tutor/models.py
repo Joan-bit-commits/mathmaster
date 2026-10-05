@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.db import models
 
+from schools.managers import SchoolScopedManager
+
 
 class ChatSession(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='tutor_sessions')
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -16,8 +19,11 @@ class ChatSession(models.Model):
     def __str__(self):
         return f'Session {self.id} for {self.student.username}'
 
+    objects = SchoolScopedManager()
+
 
 class ChatMessage(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='tutor_messages')
     ROLE_CHOICES = [('user', 'User'), ('assistant', 'Assistant')]
 
     session = models.ForeignKey(
@@ -34,3 +40,5 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f'{self.role}: {self.content[:50]}'
+
+    objects = SchoolScopedManager()

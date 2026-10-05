@@ -1,11 +1,13 @@
 from django.conf import settings
 from django.db import models
 
+from schools.managers import SchoolScopedManager
 from utils.curriculum import UGANDA_LEVELS
 
 
 class Topic(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='topics')
+    name = models.CharField(max_length=100)
     description = models.TextField()
     level = models.CharField(
         max_length=20,
@@ -22,12 +24,14 @@ class Topic(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+    objects = SchoolScopedManager()
 
     def __str__(self):
         return self.name
 
 
 class Lesson(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='lessons')
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='lessons')
     title = models.CharField(max_length=200)
     content = models.TextField()
@@ -40,12 +44,14 @@ class Lesson(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+    objects = SchoolScopedManager()
 
     def __str__(self):
         return self.title
 
 
 class Quiz(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='quizzes')
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='quizzes')
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -58,12 +64,14 @@ class Quiz(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+    objects = SchoolScopedManager()
 
     def __str__(self):
         return self.title
 
 
 class Question(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='questions')
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     question_text = models.TextField()
     choices = models.JSONField(default=list, blank=True)
@@ -77,6 +85,7 @@ class Question(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
+    objects = SchoolScopedManager()
 
     class Meta:
         ordering = ['id']
@@ -86,6 +95,7 @@ class Question(models.Model):
 
 
 class Attempt(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='attempts')
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -94,6 +104,7 @@ class Attempt(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='attempts')
     score = models.FloatField()
     attempted_at = models.DateTimeField(auto_now_add=True)
+    objects = SchoolScopedManager()
 
     def __str__(self):
         return f'{self.student.username} - {self.quiz.title} - {self.score}'

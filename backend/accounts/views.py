@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from drf_spectacular.utils import extend_schema
@@ -10,6 +11,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from analytics.signals_utils import track_event
+from memberships.models import Membership
+from memberships.serializers import MembershipSerializer
+from schools.serializers import SchoolSerializer
 
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer
@@ -33,6 +37,30 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic():
             user = serializer.save()
+            invite_token = request.data.get('invite_token')
+            if invite_token:
+                from invitations.models import Invitation
+
+                invite = Invitation.objects.filter(token=invite_token, status='pending').first()
+                if not invite or not invite.is_valid():
+                    return Response(
+                        {'error': 'Invalid or expired invitation'}, status=status.HTTP_400_BAD_REQUEST
+                    )
+                Membership.objects.create(
+                    user=user,
+                    school=invite.school,
+                    role=invite.role,
+                    class_level=invite.class_level,
+                    class_stream=invite.class_stream,
+                    admission_number=invite.admission_number,
+                    invited_by=invite.invited_by,
+                )
+                user.current_school = invite.school
+                user.save(update_fields=['current_school'])
+                invite.status = 'accepted'
+                invite.accepted_at = timezone.now()
+                invite.accepted_by = user
+                invite.save(update_fields=['status', 'accepted_at', 'accepted_by'])
             transaction.on_commit(lambda: track_event(user, 'register'))
 
         refresh = RefreshToken.for_user(user)
@@ -74,3 +102,30 @@ class ProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+
+class SwitchSchoolView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        membership = (
+            Membership.objects.filter(
+                user=request.user, school_id=request.data.get('school_id'), is_active=True
+            )
+            .select_related('school')
+            .first()
+        )
+        if not membership:
+            return Response(
+                {'error': 'No active membership in this school'}, status=status.HTTP_403_FORBIDDEN
+            )
+        request.user.current_school = membership.school
+        request.user.save(update_fields=['current_school'])
+        membership.last_active_at = timezone.now()
+        membership.save(update_fields=['last_active_at'])
+        return Response(
+            {
+                'school': SchoolSerializer(membership.school, context={'request': request}).data,
+                'membership': MembershipSerializer(membership).data,
+            }
+        )

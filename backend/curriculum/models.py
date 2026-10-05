@@ -1,8 +1,12 @@
 from django.conf import settings
 from django.db import models
 
+from schools.managers import SchoolScopedManager
+
 
 class Document(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='documents')
+
     class DocumentType(models.TextChoices):
         TEXTBOOK = 'textbook', 'Textbook chapter'
         PAST_PAPER = 'past_paper', 'Past paper'
@@ -32,8 +36,8 @@ class Document(models.Model):
     used_vision_ocr = models.BooleanField(
         default=False,
         help_text='True if any page required Gemini Vision OCR fallback during processing '
-                   '(embedded/vector math pdfplumber could not extract as text). Lets the '
-                   'client explain why this document took longer to process.',
+        '(embedded/vector math pdfplumber could not extract as text). Lets the '
+        'client explain why this document took longer to process.',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,11 +45,14 @@ class Document(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    objects = SchoolScopedManager()
+
     def __str__(self):
         return f'{self.title} ({self.owner.username})'
 
 
 class DocumentChunk(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='document_chunks')
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='chunks')
     chunk_index = models.PositiveIntegerField()
     page_number = models.PositiveIntegerField(null=True, blank=True)
@@ -60,8 +67,13 @@ class DocumentChunk(models.Model):
             models.UniqueConstraint(fields=['document', 'chunk_index'], name='unique_document_chunk')
         ]
 
+    objects = SchoolScopedManager()
+
 
 class DocumentChatSession(models.Model):
+    school = models.ForeignKey(
+        'schools.School', on_delete=models.PROTECT, related_name='document_chat_sessions'
+    )
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='chat_sessions')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='document_sessions'
@@ -73,8 +85,11 @@ class DocumentChatSession(models.Model):
     class Meta:
         ordering = ['-updated_at']
 
+    objects = SchoolScopedManager()
+
 
 class DocumentQuestion(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='document_questions')
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='questions')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='document_questions'
@@ -90,8 +105,12 @@ class DocumentQuestion(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    objects = SchoolScopedManager()
+
 
 class ScanJob(models.Model):
+    school = models.ForeignKey('schools.School', on_delete=models.PROTECT, related_name='scan_jobs')
+
     class ScanStatus(models.TextChoices):
         PENDING = 'pending', 'Pending'
         OCR = 'ocr', 'Reading image'
@@ -116,3 +135,5 @@ class ScanJob(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    objects = SchoolScopedManager()

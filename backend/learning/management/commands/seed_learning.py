@@ -4,10 +4,12 @@ Each topic: >= 2 lessons; each lesson: 1 quiz; each quiz: >= 5 questions
 (mix of multiple-choice and short-answer). S5/S6/UNIVERSITY placeholders.
 """
 
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from learning.models import Lesson, Question, Quiz, Topic
+from schools.models import School
 from utils.curriculum import (
     LESSONS,
     LEVEL_TOPICS,
@@ -28,6 +30,20 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        User = get_user_model()
+        system_user, _ = User.objects.get_or_create(
+            username='curriculum-system',
+            defaults={'email': 'system@mathmaster.app', 'role': 'admin', 'is_staff': True},
+        )
+        school, _ = School.objects.get_or_create(
+            slug='global-curriculum',
+            defaults={
+                'name': 'Global Curriculum',
+                'contact_email': 'system@mathmaster.app',
+                'school_type': 'other',
+                'created_by': system_user,
+            },
+        )
         if options['reset']:
             deleted = (
                 Question.objects.count(),
@@ -50,6 +66,7 @@ class Command(BaseCommand):
             for topic_name in LEVEL_TOPICS[level]:
                 subject, description = TOPICS[topic_name]
                 topic, created = Topic.objects.get_or_create(
+                    school=school,
                     name=f'{topic_name} ({level})',
                     defaults={
                         'description': description,
@@ -62,6 +79,7 @@ class Command(BaseCommand):
 
                 for lesson_title, lesson_content in LESSONS[topic_name]:
                     lesson, lesson_created = Lesson.objects.get_or_create(
+                        school=school,
                         topic=topic,
                         title=lesson_title,
                         defaults={'content': lesson_content},
@@ -70,6 +88,7 @@ class Command(BaseCommand):
                         stats['lessons'] += 1
 
                     quiz, quiz_created = Quiz.objects.get_or_create(
+                        school=school,
                         lesson=lesson,
                         title=f'{lesson_title} Quiz',
                         defaults={'description': f'Quiz on {lesson_title}.'},
@@ -79,6 +98,7 @@ class Command(BaseCommand):
 
                     for q_text, choices, correct in QUESTIONS[lesson_title]:
                         _, q_created = Question.objects.get_or_create(
+                            school=school,
                             quiz=quiz,
                             question_text=q_text,
                             defaults={'choices': choices, 'correct_answer': correct},
