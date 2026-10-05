@@ -59,7 +59,10 @@ def resolve_legacy_school(sender, instance, **kwargs):
         return
     for parent_name in ('topic', 'lesson', 'quiz', 'document', 'session'):
         parent = getattr(instance, parent_name, None)
-        if parent and parent.school_id:
+        # Only treat it as a FK parent when it's actually a model instance
+        # with a school_id — plain fields like ChatSession.topic are strings
+        # and would crash on parent.school_id.
+        if parent is not None and not isinstance(parent, (str, int, float, bool, list, dict)) and getattr(parent, 'school_id', None):
             instance.school_id = parent.school_id
             return
     for owner_name in ('created_by', 'owner', 'user', 'student', 'author', 'teacher'):
