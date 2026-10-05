@@ -30,6 +30,7 @@ SCHOOL_SCOPED_MODELS = (
 
 
 def _personal_school(user):
+    """Resolve (or lazily create) the user's personal school."""
     if user.current_school_id:
         return user.current_school
     base = (slugify(f'{user.username}-personal') or f'user-{user.pk}')[:90]

@@ -306,7 +306,12 @@ class ScanSolveView(APIView):
         serializer.is_valid(raise_exception=True)
         school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
         if school is None:
-            raise serializers.ValidationError({'school': 'No active school in request or user'})
+            # Users with no resolvable school (fresh accounts, or the header
+            # missing on first load) get a lazily-provisioned personal school
+            # — same fallback the school-scoping signal applies at save time.
+            from schools.signals import _personal_school
+
+            school = _personal_school(request.user)
         scan = serializer.save(user=request.user, school=school)
         solve_scan_task.delay(scan.id)
         scan.refresh_from_db()
