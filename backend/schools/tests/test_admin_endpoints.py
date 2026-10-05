@@ -236,6 +236,14 @@ class TestSubscription:
         assert resp.data['status'] == 'active'
         assert 'current_period_end' in resp.data
 
+    def test_school_without_subscription_gets_free_provisioned(self, owner_client, school):
+        client, _ = owner_client
+        assert not Subscription.objects.filter(school=school).exists()
+        resp = client.get(f'/api/schools/{school.id}/subscription/')
+        assert resp.status_code == 200
+        assert resp.data['plan'] == 'free'
+        assert Subscription.objects.filter(school=school).exists()
+
     def test_cancel(self, owner_client, school, subscription):
         client, _ = owner_client
         resp = client.post(f'/api/schools/{school.id}/subscription/cancel/')

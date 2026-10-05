@@ -282,10 +282,26 @@ class SchoolSubscriptionView(APIView):
         school = get_object_or_404(SchoolForAdmin, id=school_id)
         if not request_is_member(request.user, school):
             return Response({'error': {'code': 'FORBIDDEN', 'message': 'Not a member of this school.'}}, status=403)
+        subscription = self._ensure_subscription(school)
+        return Response(SubscriptionSerializer(subscription, context={'request': request}).data)
+
+    @staticmethod
+    def _ensure_subscription(school):
+        """Schools created outside perform_create (e.g. the personal-school
+        signal) have no subscription row — provision a free one on first read
+        so the billing page never 404s."""
+        from billing.models import SubscriptionPlan
+
         subscription = getattr(school, 'subscription', None)
         if subscription is None:
-            return Response({'error': {'code': 'NOT_FOUND', 'message': 'No subscription for this school.'}}, status=404)
-        return Response(SubscriptionSerializer(subscription, context={'request': request}).data)
+            now = timezone.now()
+            plan, _ = SubscriptionPlan.objects.get_or_create(slug='free', defaults={'name': 'Free'})
+            subscription = Subscription.objects.create(
+                school=school, plan=plan, status='active',
+                current_period_start=now,
+                current_period_end=now + timezone.timedelta(days=36500),
+            )
+        return subscription
 
 
 class CancelSubscriptionView(APIView):
