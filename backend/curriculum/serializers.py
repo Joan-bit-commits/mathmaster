@@ -29,6 +29,8 @@ class SubjectSerializer(serializers.Serializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Document
         fields = '__all__'
@@ -43,6 +45,12 @@ class DocumentSerializer(serializers.ModelSerializer):
             'detected_subject',
             'used_vision_ocr',
         )
+
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request is not None:
+            return request.build_absolute_uri(obj.file.url)
+        return obj.file.url if obj.file else ''
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,10 +87,20 @@ class DocumentQuestionSerializer(serializers.ModelSerializer):
 
 class DocumentChatSessionSerializer(serializers.ModelSerializer):
     messages = DocumentQuestionSerializer(many=True, read_only=True)
+    question = serializers.SerializerMethodField()
+    message_count = serializers.SerializerMethodField()
 
     class Meta:
         model = DocumentChatSession
-        fields = ('id', 'document', 'user', 'title', 'messages', 'created_at', 'updated_at')
+        fields = ('id', 'document', 'user', 'title', 'question', 'message_count', 'messages', 'created_at', 'updated_at')
+
+    def get_question(self, obj):
+        # Sessions are titled with the first question asked; fall back to title.
+        first = obj.messages.order_by('created_at').first()
+        return (first.question[:120] if first else None) or obj.title or ''
+
+    def get_message_count(self, obj):
+        return obj.messages.count()
 
 
 class ScanJobCreateSerializer(serializers.ModelSerializer):
