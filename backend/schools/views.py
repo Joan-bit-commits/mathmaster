@@ -60,7 +60,37 @@ class SchoolViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
-        return Response(self.get_serializer(self.get_queryset(), many=True).data)
+        """Everything the client needs to pick a school context in one call:
+        the user's schools plus their membership (role) in each, mapped to the
+        web app's Membership shape."""
+        schools = self.get_queryset()
+        memberships = Membership.objects.filter(
+            user=request.user, is_active=True, school__in=schools
+        ).select_related('school', 'user')
+        by_school = {m.school_id: m for m in memberships}
+        results = []
+        for school in schools:
+            membership = by_school.get(school.id)
+            results.append({
+                **self.get_serializer(school).data,
+                'membership': (
+                    {
+                        'id': membership.id,
+                        'school': school.id,
+                        'role': membership.role,
+                        'class_level': membership.class_level or None,
+                        'class_stream': membership.class_stream or None,
+                        'admission_number': membership.admission_number or None,
+                        'parent_email': membership.parent_email or None,
+                        'is_active': membership.is_active,
+                        'joined_at': membership.joined_at,
+                        'last_active_at': membership.last_active_at,
+                    }
+                    if membership
+                    else None
+                ),
+            })
+        return Response(results)
 
     @action(detail=True, methods=['get'])
     def members(self, request, pk=None):
