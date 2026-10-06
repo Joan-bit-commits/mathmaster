@@ -1,7 +1,10 @@
+import io
 import logging
+import mimetypes
+import os
 
 from django.db import transaction
-from django.http import StreamingHttpResponse
+from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, serializers, status
 from rest_framework.permissions import IsAuthenticated
@@ -42,6 +45,41 @@ from .tasks import process_document_task, solve_scan_task
 
 logger = logging.getLogger(__name__)
 
+
+
+class _AnyAcceptMixin:
+    """Serve raw files regardless of the Accept header.
+
+    DRF would otherwise answer 406 to clients that send `Accept: application/pdf`
+    or `image/*` (PDF viewers and image loaders do), because only JSON renderers
+    are registered.
+    """
+
+    def perform_content_negotiation(self, request, force=False):
+        renderer = self.get_renderers()[0]
+        return renderer, renderer.media_type
+
+
+def _file_response(field_file, *, max_width=None):
+    """Inline FileResponse for a stored file; optional JPEG downscale for images."""
+    if not field_file:
+        raise Http404('No file stored.')
+    content_type = mimetypes.guess_type(field_file.name)[0] or 'application/octet-stream'
+    if max_width and content_type.startswith('image/'):
+        from PIL import Image, ImageOps
+
+        with field_file.open('rb') as fh:
+            img = ImageOps.exif_transpose(Image.open(fh))
+            if img.width > max_width:
+                img = img.resize((max_width, round(img.height * max_width / img.width)))
+            buf = io.BytesIO()
+            img.convert('RGB').save(buf, 'JPEG', quality=80)
+        response = HttpResponse(buf.getvalue(), content_type='image/jpeg')
+    else:
+        response = FileResponse(field_file.open('rb'), content_type=content_type)
+    response['Content-Disposition'] = f'inline; filename="{os.path.basename(field_file.name)}"'
+    response['Cache-Control'] = 'private, max-age=3600'
+    return response
 
 class LevelsView(APIView):
     def get(self, request):
@@ -185,6 +223,17 @@ class DocumentDetailView(generics.RetrieveDestroyAPIView):
     def get_queryset(self):
         school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
         return Document.objects.filter(owner=self.request.user, school=school)
+
+
+class DocumentFileView(_AnyAcceptMixin, APIView):
+    """GET /api/documents/<id>/file/ — the original uploaded file (PDF/JPEG/PNG), auth + school scoped."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        document = get_object_or_404(Document, pk=pk, owner=request.user, school=school)
+        return _file_response(document.file)
 
 
 class DocumentProcessView(APIView):
@@ -334,6 +383,22 @@ class ScanJobDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
         return ScanJob.objects.filter(user=self.request.user, school=school)
+
+
+class ScanJobImageView(_AnyAcceptMixin, APIView):
+    """GET /api/scan/jobs/<id>/image/[?w=480] — the scanned photo, optionally downscaled for thumbnails."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        school = getattr(request, 'school', None) or getattr(request.user, 'current_school', None)
+        scan = get_object_or_404(ScanJob, pk=pk, user=request.user, school=school)
+        try:
+            width = int(request.query_params.get('w', 0))
+        except ValueError:
+            width = 0
+        width = max(0, min(width, 2000)) or None
+        return _file_response(scan.image, max_width=width)
 
 
 class PastPaperUploadView(DocumentListCreateView):

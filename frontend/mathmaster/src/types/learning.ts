@@ -125,12 +125,16 @@ export const REFUSAL_PHRASE =
 export type AnalyticsSummary = {
   lessons_completed: number;
   quizzes_taken: number;
-  avg_score: number;
+  /** null when the student has no quiz attempts in the period. */
+  avg_score: number | null;
   current_streak: number;
-  longest_streak: number;
-  total_xp: number;
-  level: number;
-  mastery: number;
+  topics_covered?: number;
+  ai_questions_asked?: number;
+  // Not tracked by the backend yet — only present in mock mode.
+  longest_streak?: number;
+  total_xp?: number;
+  level?: number;
+  mastery?: number;
 };
 
 export type WeeklyActivity = {

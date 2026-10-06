@@ -9,6 +9,37 @@ const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const subjectStyle: Record<string, { icon: string; color: string }> = {
+  algebra: { icon: 'Sigma', color: 'brand' },
+  geometry: { icon: 'Triangle', color: 'success' },
+  calculus: { icon: 'TrendingUp', color: 'accent' },
+  statistics: { icon: 'BarChart3', color: 'warning' },
+  trigonometry: { icon: 'Compass', color: 'danger' },
+  'number theory': { icon: 'Hash', color: 'accent' },
+};
+
+// The API sends lesson_count + a 0-100 progress; the UI wants lessons_count / lessons_completed / icon / color.
+function normalizeTopic(raw: any): Topic {
+  const lessonsCount = raw.lessons_count ?? raw.lesson_count ?? 0;
+  const progress = Math.round(raw.progress ?? 0);
+  const style = subjectStyle[String(raw.subject ?? '').toLowerCase()] ?? { icon: 'Sigma', color: 'brand' };
+  return {
+    id: String(raw.id),
+    name: raw.name ?? '',
+    description: raw.description ?? '',
+    level: raw.level,
+    subject: raw.subject,
+    icon: raw.icon ?? style.icon,
+    color: raw.color ?? style.color,
+    lessons_count: lessonsCount,
+    quizzes_count: raw.quizzes_count ?? 0,
+    estimated_hours: raw.estimated_hours ?? 0,
+    progress,
+    lessons_completed: raw.lessons_completed ?? Math.round((progress / 100) * lessonsCount),
+    created_at: raw.created_at ?? '',
+  };
+}
+
 export async function getTopics(filters?: { level?: string; search?: string; page?: number }): Promise<{ results: Topic[]; hasMore: boolean }> {
   if (USE_MOCKS) {
     await delay(400);
@@ -30,7 +61,9 @@ export async function getTopics(filters?: { level?: string; search?: string; pag
   if (filters?.level) params.set('level', filters.level);
   if (filters?.search) params.set('search', filters.search);
   if (filters?.page) params.set('page', String(filters.page));
-  return get(`/api/learning/topics/?${params}`);
+  const data = await get<any>(`/api/learning/topics/?${params}`);
+  const list: any[] = Array.isArray(data) ? data : data?.results ?? [];
+  return { results: list.map(normalizeTopic), hasMore: Boolean(data?.next) };
 }
 
 export async function getTopic(id: string): Promise<Topic> {
@@ -40,7 +73,7 @@ export async function getTopic(id: string): Promise<Topic> {
     if (!topic) throw new Error('Topic not found');
     return topic;
   }
-  return get(`/api/learning/topics/${id}/`);
+  return normalizeTopic(await get<any>(`/api/learning/topics/${id}/`));
 }
 
 export async function getLessonsByTopic(topicId: string): Promise<Lesson[]> {

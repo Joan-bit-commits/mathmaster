@@ -32,6 +32,28 @@ const mockUsers: Record<string, AuthUser> = {
   },
 };
 
+/**
+ * Loads the user's schools and applies them (restoring the school they last used).
+ * A network/API hiccup keeps whatever school was already remembered instead of signing the user out.
+ */
+async function syncSchools(userId: string) {
+  useSchoolStore.getState().setLoading(true);
+  try {
+    const { fetchMySchools } = await import('@/services/schools');
+    useSchoolStore.getState().setSchools(userId, await fetchMySchools());
+  } catch {
+    // keep the remembered school
+  } finally {
+    useSchoolStore.getState().setLoading(false);
+  }
+}
+
+/** Show the user's remembered school at once, then refresh it from the server. */
+async function startSchoolSession(userId: string) {
+  useSchoolStore.getState().hydrateForUser(userId);
+  await syncSchools(userId);
+}
+
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
@@ -71,6 +93,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Invalid demo credentials. Use the demo buttons to fill in credentials.');
           }
           set({ user, accessToken: 'mock-access', refreshToken: 'mock-refresh', isAuthenticated: true });
+          await startSchoolSession(String(user.id));
           return;
         }
 
@@ -78,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken: access, refreshToken: refresh });
         const profile = await apiGet<AuthUser>('/api/accounts/profile/');
         set({ user: profile, isAuthenticated: true });
+        await startSchoolSession(String(profile.id));
       },
 
       register: async (data) => {
@@ -91,15 +115,19 @@ export const useAuthStore = create<AuthState>()(
             last_name: data.last_name ?? '',
           };
           set({ user, accessToken: 'mock-access', refreshToken: 'mock-refresh', isAuthenticated: true });
+          await startSchoolSession(String(user.id));
           return;
         }
 
         const res = await apiPost<{ user: AuthUser; access: string; refresh: string }>('/api/accounts/register/', data, { skipAuth: true } satisfies ApiRequestConfig);
         set({ user: res.user, accessToken: res.access, refreshToken: res.refresh, isAuthenticated: true });
+        await startSchoolSession(String(res.user.id));
       },
 
       logout: () => {
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        // Drop the active school so the next account never inherits it (the per-user "last school" memory stays).
+        useSchoolStore.getState().deactivate();
       },
 
       refreshProfile: async () => {
@@ -116,28 +144,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const profile = await apiGet<AuthUser>('/api/accounts/profile/');
           set({ user: profile, isAuthenticated: true, isLoading: false });
-          // Bootstrap the school context from the backend. The persisted
-          // localStorage school may be a stale mock (e.g. 'school-1') that
-          // the real API 404s on — always refresh from the server.
-          const { fetchMySchools } = await import('@/services/schools');
-          const schools = await fetchMySchools();
-          const schoolStore = useSchoolStore.getState();
-          if (schools.length === 0) {
-            // Fresh user with no school yet — drop any stale persisted school
-            // so pages don't fire requests against a nonexistent id.
-            schoolStore.clear();
-          } else {
-            const memberships = schools
-              .filter((s) => s.membership)
-              .map((s) => ({ ...s.membership!, school: String(s.id) }));
-            const currentId = String(schoolStore.currentSchool?.id ?? '');
-            const persistedStillValid = memberships.some((m) => m.school === currentId);
-            const active = persistedStillValid ? currentId : String(schools[0].id);
-            const school = schools.find((s) => String(s.id) === active)!;
-            const membership = memberships.find((m) => m.school === active) ?? null;
-            schoolStore.setMemberships(memberships);
-            if (membership) schoolStore.setCurrentSchool(school, membership);
-          }
+          // Bootstrap the school context (restores the school this user last used).
+          await syncSchools(String(profile.id));
         } catch {
           set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false });
         }

@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   fetchDocument,
-  fetchDocumentChunks,
   pollDocumentUntilProcessed,
   reprocessDocument,
 } from "../../../src/services/documents";
@@ -11,6 +10,7 @@ import useDocumentQA from "../../../src/hooks/useDocumentQA";
 import Screen from "../../../src/components/ui/Screen";
 import ModeTabs from "../../../src/components/ui/ModeTabs";
 import LatexText from "../../../src/components/ui/LatexText";
+import DocumentViewer from "../../../src/components/ui/DocumentViewer";
 import MaterialIcon from "../../../src/components/ui/MaterialIcon";
 import LoadingSkeleton from "../../../src/components/ui/LoadingSkeleton";
 import QuickPromptChips from "../../../src/components/ui/QuickPromptChips";
@@ -23,12 +23,11 @@ export default function DocumentDetail() {
   const [mode, setMode] = useState("Ask");
   const [question, setQuestion] = useState("");
 
-  // Read tab state: chunks are fetched once the document is actually
-  // ready, grouped by page, with simple prev/next navigation. A citation
-  // tap (see jumpToPage below) switches into this tab at the cited page.
-  const [chunks, setChunks] = useState(null);
-  const [chunksLoading, setChunksLoading] = useState(false);
+  // Read tab state: the original file is shown in a native PDF/image
+  // viewer. activePage is controlled here so the prev/next buttons and
+  // citation taps (see jumpToPage below) can drive the viewer.
   const [activePage, setActivePage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
   const qa = useDocumentQA(id);
 
@@ -51,44 +50,6 @@ export default function DocumentDetail() {
       cancelled = true;
     };
   }, [id]);
-
-  useEffect(() => {
-    if (document?.processing_status !== "ready" || chunks !== null) return;
-    let cancelled = false;
-    setChunksLoading(true);
-    fetchDocumentChunks(id)
-      .then((data) => {
-        if (!cancelled) setChunks(data || []);
-      })
-      .catch(() => {
-        if (!cancelled) setChunks([]);
-      })
-      .finally(() => {
-        if (!cancelled) setChunksLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [document?.processing_status, id, chunks]);
-
-  const pageNumbers = useMemo(() => {
-    if (!chunks) return [];
-    return [...new Set(chunks.map((chunk) => chunk.page_number).filter(Boolean))].sort((a, b) => a - b);
-  }, [chunks]);
-
-  const activePageContent = useMemo(() => {
-    if (!chunks) return "";
-    return chunks
-      .filter((chunk) => chunk.page_number === activePage)
-      .map((chunk) => chunk.content)
-      .join("\n\n");
-  }, [chunks, activePage]);
-
-  useEffect(() => {
-    if (pageNumbers.length > 0 && !pageNumbers.includes(activePage)) {
-      setActivePage(pageNumbers[0]);
-    }
-  }, [pageNumbers]);
 
   const jumpToPage = (page) => {
     if (!page) return;
@@ -189,75 +150,50 @@ export default function DocumentDetail() {
         />
         {mode === "Read" && (
           <View className="mt-5">
-            {chunksLoading ? (
-              <LoadingSkeleton variant="card" className="h-48" />
-            ) : !chunks || chunks.length === 0 ? (
-              <View className="rounded-2xl bg-surface-container-lowest p-5">
-                <Text className="font-title-lg text-on-surface">
-                  Document preview
+            {totalPages > 1 && (
+              <View className="flex-row items-center justify-between mb-3">
+                <Pressable
+                  onPress={() => setActivePage((page) => Math.max(1, page - 1))}
+                  disabled={activePage <= 1}
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous page"
+                  className="h-9 w-9 items-center justify-center rounded-full bg-surface-container-lowest"
+                >
+                  <MaterialIcon
+                    name="chevron_left"
+                    size={20}
+                    color={activePage <= 1 ? "on-surface-variant" : "on-surface"}
+                  />
+                </Pressable>
+                <Text className="font-label-sm text-on-surface-variant">
+                  Page {activePage} of {totalPages}
                 </Text>
-                <Text className="font-body-md mt-4 text-on-surface-variant">
-                  {stillProcessing
-                    ? "This document is still processing — its content will appear here once it's ready."
-                    : "No extracted content is available for this document yet."}
-                </Text>
+                <Pressable
+                  onPress={() =>
+                    setActivePage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={activePage >= totalPages}
+                  accessibilityRole="button"
+                  accessibilityLabel="Next page"
+                  className="h-9 w-9 items-center justify-center rounded-full bg-surface-container-lowest"
+                >
+                  <MaterialIcon
+                    name="chevron_right"
+                    size={20}
+                    color={
+                      activePage >= totalPages ? "on-surface-variant" : "on-surface"
+                    }
+                  />
+                </Pressable>
               </View>
-            ) : (
-              <>
-                {pageNumbers.length > 1 && (
-                  <View className="flex-row items-center justify-between mb-3">
-                    <Pressable
-                      onPress={() =>
-                        setActivePage((page) => {
-                          const idx = pageNumbers.indexOf(page);
-                          return pageNumbers[Math.max(0, idx - 1)];
-                        })
-                      }
-                      disabled={activePage === pageNumbers[0]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Previous page"
-                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-container-lowest"
-                    >
-                      <MaterialIcon
-                        name="chevron_left"
-                        size={20}
-                        color={activePage === pageNumbers[0] ? "on-surface-variant" : "on-surface"}
-                      />
-                    </Pressable>
-                    <Text className="font-label-sm text-on-surface-variant">
-                      Page {activePage} of {pageNumbers[pageNumbers.length - 1]}
-                    </Text>
-                    <Pressable
-                      onPress={() =>
-                        setActivePage((page) => {
-                          const idx = pageNumbers.indexOf(page);
-                          return pageNumbers[Math.min(pageNumbers.length - 1, idx + 1)];
-                        })
-                      }
-                      disabled={activePage === pageNumbers[pageNumbers.length - 1]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Next page"
-                      className="h-9 w-9 items-center justify-center rounded-full bg-surface-container-lowest"
-                    >
-                      <MaterialIcon
-                        name="chevron_right"
-                        size={20}
-                        color={
-                          activePage === pageNumbers[pageNumbers.length - 1]
-                            ? "on-surface-variant"
-                            : "on-surface"
-                        }
-                      />
-                    </Pressable>
-                  </View>
-                )}
-                <View className="rounded-2xl bg-surface-container-lowest p-5">
-                  <LatexText className="font-body-md text-on-surface">
-                    {activePageContent || "No extracted text for this page."}
-                  </LatexText>
-                </View>
-              </>
             )}
+            <DocumentViewer
+              documentId={id}
+              fileType={document.file_type}
+              page={activePage}
+              onLoaded={setTotalPages}
+              onPageChanged={setActivePage}
+            />
           </View>
         )}
         {mode === "Ask" && (
