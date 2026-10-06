@@ -1,0 +1,7 @@
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Mail, Sparkles } from 'lucide-react';
+import { AuthLayout } from './AuthLayout';
+import { Button } from '@/components/ui/button';
+import { Input, Label } from '@/components/ui/input';
+
+export default function ForgotPassword() { return <AuthLayout title="Reset your password" subtitle="Enter your email and we’ll help you get back into your account."><div className="rounded-2xl border border-brand-100 bg-brand-50/70 p-5 dark:border-brand-900/40 dark:bg-brand-900/20"><Sparkles className="h-5 w-5 text-brand-500" /><p className="mt-3 text-sm leading-6 text-brand-800 dark:text-brand-200">Password reset is coming soon. For now, please reach out to your school administrator for help signing back in.</p></div><form className="mt-7 space-y-5" onSubmit={(event) => event.preventDefault()}><div><Label htmlFor="reset-email">Email address</Label><div className="relative mt-2"><Mail className="absolute left-3.5 top-3 h-4 w-4 text-ink-400" /><Input id="reset-email" type="email" placeholder="you@example.com" className="pl-10" /></div></div><Button type="submit" variant="gradient" size="lg" className="w-full">Send reset link</Button></form><Link to="/login" className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700"><ArrowLeft className="h-4 w-4" /> Back to sign in</Link></AuthLayout>; }

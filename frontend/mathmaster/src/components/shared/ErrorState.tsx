@@ -1,0 +1,4 @@
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export function ErrorState({ onRetry, message = 'Something went wrong while loading this page.' }: { onRetry?: () => void; message?: string }) { return <div className="flex min-h-[260px] flex-col items-center justify-center rounded-3xl border border-rose-200 bg-rose-50/60 p-8 text-center dark:border-rose-900/40 dark:bg-rose-900/10"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300"><AlertCircle className="h-6 w-6" /></div><h3 className="mt-4 text-base font-semibold text-ink-900 dark:text-ink-100">Something went wrong</h3><p className="mt-1 max-w-sm text-sm text-ink-500 dark:text-ink-400">{message}</p>{onRetry && <Button variant="secondary" size="sm" onClick={onRetry} className="mt-5"><RefreshCw className="h-4 w-4" /> Try again</Button>}</div>; }

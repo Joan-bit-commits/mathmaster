@@ -1,134 +1,105 @@
-/* stylelint-disable at-rule-no-unknown */
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/geist";
-/* stylelint-disable-next-line at-rule-no-unknown */
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
-/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
 @layer base {
-  .theme {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Inter Variable', 'Inter', 'Geist Variable', sans-serif;
-  }
-  :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-  }
-  .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
   * {
-    box-sizing: border-box;
-    border-color: var(--border);
-    outline-color: var(--ring);
+    border-color: theme('colors.ink.200');
   }
-  ::selection {
-    background: rgba(14, 165, 233, 0.22);
-    color: rgb(15, 23, 42);
-  }
+
   body {
-    background:
-      radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 28%),
-      radial-gradient(circle at 85% 12%, rgba(245, 158, 11, 0.12), transparent 26%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-    background-attachment: fixed;
-    color: var(--foreground);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #F8FAFC;
+    color: #0F172A;
     -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
   }
-  html {
-    font-family: var(--font-sans);
-    scroll-behavior: smooth;
+
+  .dark body {
+    background-color: #0F172A;
+    color: #F1F5F9;
+  }
+
+  .dark * {
+    border-color: #1E293B;
+  }
+}
+
+@layer components {
+  .glass {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass {
+    background-color: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      rgba(241, 245, 249, 1) 0%,
+      rgba(226, 232, 240, 1) 50%,
+      rgba(241, 245, 249, 1) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  .dark .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      rgba(30, 41, 59, 1) 0%,
+      rgba(51, 65, 85, 1) 50%,
+      rgba(30, 41, 59, 1) 100%
+    );
+    background-size: 200% 100%;
   }
 }
 
 @layer utilities {
-  .app-noise {
-    background-image:
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 28px 28px;
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.ink.300') transparent;
   }
 
-  .glass-panel {
-    backdrop-filter: blur(18px);
-    background: rgba(255, 255, 255, 0.82);
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
 
-  .section-divider {
-    position: relative;
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .section-divider::after {
-    content: '';
-    position: absolute;
-    inset-inline: 0;
-    bottom: -1rem;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.35), rgba(245, 158, 11, 0.45), transparent);
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: theme('colors.ink.300');
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.ink.400');
+  }
+
+  .dark .scrollbar-thin {
+    scrollbar-color: #334155 transparent;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #334155;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #475569;
   }
 }
