@@ -66,6 +66,7 @@ export async function askAIStream(
   let sessionId = payload.session_id ?? null;
   let isRefusal = false;
   let geogebra = null;
+  let emittedLen = 0;
   try {
     for (;;) {
       const { done, value } = await reader.read();
@@ -90,7 +91,17 @@ export async function askAIStream(
           if (!geogebra && parsed.geogebra) { geogebra = parsed.geogebra; onGeoGebra?.(geogebra); }
         }
         else if (eventName === 'error') throw new Error(parsed.error?.message || 'AI tutor error');
-        else if (parsed.token) { full += parsed.token; onToken?.(parsed.token); }
+        else if (parsed.token) {
+          full += parsed.token;
+          // Suppress the raw [GEOGEBRA_DATA: ...] tag while streaming — the
+          // sketch arrives separately via the geogebra event.
+          const tagIdx = full.indexOf('[GEOGEBRA_DATA');
+          const visibleLen = tagIdx === -1 ? full.length : tagIdx;
+          if (visibleLen > emittedLen) {
+            onToken?.(full.slice(emittedLen, visibleLen));
+            emittedLen = visibleLen;
+          }
+        }
       }
     }
   } catch (err) {
