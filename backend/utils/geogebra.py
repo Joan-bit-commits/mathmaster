@@ -8,28 +8,37 @@ logger = logging.getLogger(__name__)
 _TAG_RE = re.compile(r'\n\[GEOGEBRA_DATA:\s*(\{.*?\})\s*\]\s*$', re.DOTALL)
 _VALID_VIEWS = {'2D', '3D'}
 _REQUIRED_FIELDS = {'view', 'title', 'commands'}
-_KNOWN_COMMAND_PREFIXES = (
-    'f(', 'g(', 'h(', 'p(', 'q(', 'r(', 'a(', 'b(', 'c(', 'A=', 'B=', 'C=',
-    'Polygon', 'Circle', 'Line', 'Segment', 'Ray', 'Point', 'Vector', 'Arc',
-    'Sphere', 'Plane', 'Surface', 'Cone', 'Cylinder', 'Prism', 'Pyramid', 'Tetrahedron', 'Cube', 'Polyhedron', 'Net',
-    'Reflect', 'Rotate', 'Translate', 'Dilate', 'Mirror',
-    'Intersect', 'Tangent', 'Normal', 'Derivative', 'Integral', 'Root', 'Extremum',
-    'ShowLabel', 'ShowObject', 'SetColor', 'SetLineThickness', 'SetPointSize', 'SetVisible', 'SetConditionToShowObject',
-    'Solve', 'Factor', 'Expand', 'Simplify', 'NSolve', 'CSolve', 'Vertex', 'Roots', 'Midpoint', 'Distance', 'Angle',
-    'Plane((', 'Sphere((', 'Line((', 'Vector((', 'Point((',
+
+
+_DANGEROUS_COMMAND_PATTERNS = (
+    'javascript', 'eval(', 'exec(', 'system(', 'python', '<script',
+    'fetch(', 'xmlhttprequest', 'import(', 'require(', 'process.',
+    'function(', '=>', 'this.', 'window.', 'document.', 'globalthis',
 )
 
 
 def _validate_commands(commands):
+    """GeoGebra's evalCommand is a sandboxed command interpreter (its own
+    syntax — it cannot execute JavaScript), so a whitelist of command names
+    rejects perfectly valid sketches whenever Gemini uses a command we didn't
+    anticipate (Text, Slope, Midpoint with spaces...). Instead: block
+    actually dangerous patterns and cap size/count."""
     if not isinstance(commands, list) or len(commands) > 50:
         return False
+    cleaned = []
     for cmd in commands:
-        if not isinstance(cmd, str) or len(cmd) > 500:
+        if not isinstance(cmd, str):
             return False
         cmd = cmd.strip()
-        if not any(cmd.startswith(p) for p in _KNOWN_COMMAND_PREFIXES):
+        if not cmd or len(cmd) > 500:
+            return False
+        lowered = re.sub(r'\s+', '', cmd).lower()
+        if any(pattern in lowered for pattern in _DANGEROUS_COMMAND_PATTERNS):
             logger.warning('GeoGebra command rejected: %r', cmd[:80])
             return False
+        cleaned.append(cmd)
+    # Persist the cleaned list so the client re-runs exactly what passed.
+    commands[:] = cleaned
     return True
 
 

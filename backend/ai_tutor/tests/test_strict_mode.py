@@ -121,6 +121,19 @@ class TestStrictModeNonStreaming:
             resp = _post(student_client)
         assert resp.data['geogebra'] is None
 
+    def test_valid_but_unlisted_command_accepted(self, student_client):
+        """Gemini legitimately emits commands beyond any fixed whitelist
+        (Text, Slope, Midpoint with spaces...) — these must survive, or
+        sketches vanish when the session is re-read from history."""
+        with mock.patch(
+            'ai_tutor.services.ask_gemini',
+            return_value='Answer.\n[GEOGEBRA_DATA: {"view": "2D", "title": "t", "commands": ["A = (0, 0)", "B = (3, 0)", "Text(\\"Vertex\\", (1, 1))", "Slope(f)"]}]',
+        ):
+            resp = _post(student_client)
+        geo = resp.data['geogebra']
+        assert geo is not None
+        assert 'A = (0, 0)' in geo['commands']
+
     def test_payload_shape_matches_contract(self, student_client, gemini_mock):
         resp = _post(student_client)
         assert set(resp.data.keys()) == {
