@@ -4,6 +4,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from accounts.models import User
+from memberships.models import Membership
+from schools.models import School
 from curriculum.models import Document
 from curriculum.services import extract_past_paper_questions
 
@@ -16,6 +18,10 @@ class PastPaperUploadTests(TestCase):
 
     def setUp(self):
         self.teacher = User.objects.create_user(username='teacher1', password='StrongPass1!', role='teacher')
+        self.school = School.objects.create(name='Past Paper School', slug='past-paper-school', contact_email='teacher@example.com', created_by=self.teacher)
+        Membership.objects.create(user=self.teacher, school=self.school, role='owner')
+        self.teacher.current_school = self.school
+        self.teacher.save(update_fields=['current_school'])
         self.client_ = self._client()
 
     def _client(self):
@@ -25,7 +31,7 @@ class PastPaperUploadTests(TestCase):
         api.force_authenticate(user=self.teacher)
         return api
 
-    @patch('curriculum.services.extract_pages_from_pdf', return_value=[(1, 'Q1. Solve 2x+5=13.')])
+    @patch('curriculum.services._pdf_text_pages', return_value=[(1, 'Q1. Solve 2x+5=13.')])
     def test_upload_is_processed_and_typed_as_past_paper(self, _mock_extract):
         resp = self.client_.post(
             '/api/teacher/past-papers/',
@@ -46,10 +52,15 @@ class PastPaperUploadTests(TestCase):
 class ExtractPastPaperQuestionsTests(TestCase):
     def setUp(self):
         self.teacher = User.objects.create_user(username='teacher2', password='StrongPass1!', role='teacher')
+        self.school = School.objects.create(name='Past Paper School 2', slug='past-paper-school-2', contact_email='teacher2@example.com', created_by=self.teacher)
+        Membership.objects.create(user=self.teacher, school=self.school, role='owner')
+        self.teacher.current_school = self.school
+        self.teacher.save(update_fields=['current_school'])
 
     def _paper(self, status=Document.ProcessingStatus.READY, text='Q1. Solve 2x+5=13.\nQ2. Find the area.'):
         return Document.objects.create(
             owner=self.teacher,
+            school=self.school,
             title='Paper',
             document_type=Document.DocumentType.PAST_PAPER,
             processing_status=status,
@@ -103,10 +114,15 @@ class ExtractPastPaperQuestionsTests(TestCase):
         from learning.models import Lesson, Topic
 
         self.teacher = User.objects.create_user(username='teacher3', password='StrongPass1!', role='teacher')
-        self.topic = Topic.objects.create(name='Algebra', level='S1', subject='Mathematics', created_by=self.teacher)
-        self.lesson = Lesson.objects.create(topic=self.topic, title='Linear equations', content='...')
+        self.school = School.objects.create(name='Past Paper School 3', slug='past-paper-school-3', contact_email='teacher3@example.com', created_by=self.teacher)
+        Membership.objects.create(user=self.teacher, school=self.school, role='owner')
+        self.teacher.current_school = self.school
+        self.teacher.save(update_fields=['current_school'])
+        self.topic = Topic.objects.create(name='Algebra', level='S1', subject='Mathematics', created_by=self.teacher, school=self.school)
+        self.lesson = Lesson.objects.create(topic=self.topic, school=self.school, title='Linear equations', content='...')
         self.paper = Document.objects.create(
             owner=self.teacher,
+            school=self.school,
             title='UCE 2024 P1',
             document_type=Document.DocumentType.PAST_PAPER,
             processing_status=Document.ProcessingStatus.READY,

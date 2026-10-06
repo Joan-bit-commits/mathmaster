@@ -22,6 +22,7 @@ import KeyboardScreen from "../../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../../src/components/ui/MaterialIcon";
 import Screen from "../../../../src/components/ui/Screen";
 import LatexText from "../../../../src/components/ui/LatexText";
+import GeoGebraSketch from "../../../../src/components/chat/GeoGebraSketch";
 import { askAIStream, fetchSession } from "../../../../src/services/aiTutor";
 
 function TypingDots() {
@@ -61,7 +62,21 @@ function AnimatedDot({ sv }) {
   );
 }
 
-function ChatMessage({ isUser, content }) {
+function RefusalBanner() {
+  return (
+    <View className="gap-2">
+      <View className="flex-row items-center gap-2">
+        <View className="w-6 h-6 rounded-md bg-amber-200 items-center justify-center">
+          <Text className="text-amber-800 text-[14px]">🔒</Text>
+        </View>
+        <Text className="text-[14px] font-semibold text-amber-900">MathMaster only answers math</Text>
+      </View>
+      <Text className="text-[13px] text-amber-800 leading-5">I can help with algebra, geometry, trigonometry, calculus, statistics, or any other math topic. Please ask a math question.</Text>
+    </View>
+  );
+}
+
+function ChatMessage({ isUser, content, isRefusal, geogebra }) {
   return (
     <View
       className={`flex-row gap-2 mb-4 max-w-[85%] ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
@@ -74,11 +89,16 @@ function ChatMessage({ isUser, content }) {
             : "bg-surface-container-lowest shadow-level-1 rounded-tl-sm"
         }`}
       >
-        <LatexText
-          className={`text-[16px] leading-6 ${isUser ? "text-on-primary" : "text-on-surface"}`}
-        >
-          {content}
-        </LatexText>
+        {isUser ? (
+          <LatexText className="text-[16px] leading-6 text-on-primary">{content}</LatexText>
+        ) : isRefusal ? (
+          <RefusalBanner />
+        ) : (
+          <>
+            <LatexText className="text-[16px] leading-6 text-on-surface">{content}</LatexText>
+            {geogebra ? <GeoGebraSketch payload={geogebra} height={380} /> : null}
+          </>
+        )}
       </View>
     </View>
   );
@@ -112,6 +132,8 @@ export default function AIChatScreen() {
           const history = (session?.messages || []).map((m) => ({
             isUser: m.role === "user",
             content: m.content,
+            isRefusal: Boolean(m.is_refusal),
+            geogebra: m.geogebra ?? null,
           }));
           setMessages(history);
         })
@@ -137,7 +159,7 @@ export default function AIChatScreen() {
     setMessages((m) => [...m, { isUser: true, content: q }]);
     setThinking(true);
     try {
-      setMessages((m) => [...m, { isUser: false, content: "" }]);
+      setMessages((m) => [...m, { isUser: false, content: "", isRefusal: false, geogebra: null }]);
       await askAIStream(
         { topic: "Algebra", question: q, session_id: sessionId ?? undefined },
         {
@@ -148,11 +170,28 @@ export default function AIChatScreen() {
               if (last && !last.isUser) last.content += token;
               return [...copy];
             }),
+          onGeoGebra: (geo) =>
+            setMessages((m) => {
+              const copy = [...m];
+              const last = copy[copy.length - 1];
+              if (last && !last.isUser) last.geogebra = geo;
+              return [...copy];
+            }),
           // Capture the real session id from the first reply, and keep
           // reusing it on every later turn so the conversation actually
           // has continuity server-side instead of starting a fresh
           // ChatSession on every single message.
-          onDone: (id) => setSessionId(id),
+          onDone: (info) => {
+            const id = typeof info === "object" && info !== null ? info.sessionId : info;
+            const isRefusal = typeof info === "object" && info !== null ? Boolean(info.isRefusal) : false;
+            setSessionId(id ?? null);
+            setMessages((m) => {
+              const copy = [...m];
+              const last = copy[copy.length - 1];
+              if (last && !last.isUser) last.isRefusal = isRefusal;
+              return [...copy];
+            });
+          },
         },
       );
     } catch {
@@ -213,7 +252,7 @@ export default function AIChatScreen() {
             showsVerticalScrollIndicator={false}
           >
             {messages.map((m, i) => (
-              <ChatMessage key={i} isUser={m.isUser} content={m.content} />
+              <ChatMessage key={i} isUser={m.isUser} content={m.content} isRefusal={m.isRefusal} geogebra={m.geogebra} />
             ))}
             {thinking && !messages[messages.length - 1]?.content ? (
               <TypingDots />

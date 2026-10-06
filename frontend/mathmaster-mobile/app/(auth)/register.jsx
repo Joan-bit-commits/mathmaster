@@ -118,7 +118,7 @@ export default function RegisterScreen() {
 
               <Input
                 label="Password" leftIcon="lock" value={password} onChangeText={setPassword} secureTextEntry={!showPassword}
-                rightIcon={showPassword ? 'visibility-off' : 'visibility'} onRightIconPress={() => setShowPassword(!showPassword)}
+                rightIcon={showPassword ? 'visibility_off' : 'visibility'} onRightIconPress={() => setShowPassword(!showPassword)}
                 autoComplete="new-password" textContentType="newPassword"
                 helperText={strength === 0 ? 'At least 8 characters with an uppercase letter and a digit.' : undefined}
               />

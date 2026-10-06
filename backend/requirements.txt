@@ -19,3 +19,8 @@ celery==5.4.0
 redis==5.2.1
 gunicorn==23.0.0
 whitenoise==6.9.0
+stripe==10.0.0
+python-slugify==8.0.0
+django-money==3.6.1
+pycountry==24.6.1
+phonenumbers==8.13.0

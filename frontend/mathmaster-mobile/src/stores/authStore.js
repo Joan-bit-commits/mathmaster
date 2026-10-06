@@ -56,7 +56,10 @@ export const useAuthStore = create(
       },
 
       logout: () =>
-        set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+        (() => {
+          require('./documentsStore').useDocumentsStore.getState().clearDocuments();
+          set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        })(),
     }),
     {
       name: 'mathmaster-auth',

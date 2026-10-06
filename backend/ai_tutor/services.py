@@ -6,6 +6,7 @@ from django.core.cache import cache
 from google.api_core import exceptions as google_exceptions
 
 from analytics.signals_utils import track_event
+from utils.geogebra import extract_geogebra
 from utils.gemini import ask_gemini, gemini_configured, stream_gemini
 from utils.prompts import math_tutor_prompt
 from utils.sanitize import sanitize_text
@@ -44,10 +45,24 @@ def _cache_key(topic: str, question: str, level: str) -> str:
     return f'ai-tutor:{digest}'
 
 
-def _history_for_session(session_id: int | None, student):
+def _resolve_school(request):
+    school = getattr(request, 'school', None)
+    if school is not None:
+        return school
+    current_school = getattr(request.user, 'current_school', None)
+    if current_school is not None:
+        return current_school
+    membership = request.user.memberships.filter(is_active=True).select_related('school').first()
+    return membership.school if membership else None
+
+
+def _history_for_session(session_id: int | None, student, school=None):
     if not session_id:
         return None, []
-    session = ChatSession.objects.filter(id=session_id, student=student).first()
+    queryset = ChatSession.objects.filter(id=session_id, student=student)
+    if school is not None:
+        queryset = queryset.filter(school=school)
+    session = queryset.first()
     if not session:
         return None, []
     messages = list(session.messages.all())[-HISTORY_WINDOW:]
@@ -55,9 +70,49 @@ def _history_for_session(session_id: int | None, student):
     return session, history
 
 
-def _persist_messages(session, question: str, answer: str):
-    ChatMessage.objects.create(session=session, role='user', content=question)
-    ChatMessage.objects.create(session=session, role='assistant', content=answer)
+def _persist_messages(session, question: str, answer: str, geogebra: dict | None):
+    # Persist the raw model output (including the [GEOGEBRA_DATA] tag) so
+    # the sketch data survives; strip it only when presenting to clients.
+    ChatMessage.objects.create(session=session, school=session.school, role='user', content=question)
+    ChatMessage.objects.create(
+        session=session, school=session.school, role='assistant', content=answer
+    )
+
+
+def _detect_refusal(answer: str) -> bool:
+    return answer.strip().lower().startswith("i'm sorry, but i can only help with mathematics")
+
+
+def _build_payload(session, topic: str, level: str, raw_answer: str, cached: bool):
+    """Shared response assembly for both streaming and non-streaming.
+
+    Extracts/validates the [GEOGEBRA_DATA] block, detects refusals, and
+    returns (visible_answer, geogebra, is_refusal, payload).
+    """
+    if _detect_refusal(raw_answer):
+        visible = raw_answer.strip()
+        payload = {
+            'session_id': session.id if session else None,
+            'topic': topic,
+            'level': level,
+            'answer': visible,
+            'geogebra': None,
+            'cached': cached,
+            'is_refusal': True,
+        }
+        return visible, None, True, payload
+
+    visible, geogebra = extract_geogebra(raw_answer)
+    payload = {
+        'session_id': session.id if session else None,
+        'topic': topic,
+        'level': level,
+        'answer': visible,
+        'geogebra': geogebra,
+        'cached': cached,
+        'is_refusal': False,
+    }
+    return visible, geogebra, False, payload
 
 
 def _get_answer(request, data):
@@ -129,6 +184,14 @@ def _log_gemini_error(level: str, exc: Exception, **context):
     log('Gemini request failed (%s): %s', type(exc).__name__, context, exc_info=True)
 
 
+def _ensure_session(request, session, topic: str, question: str, school):
+    if session is None:
+        session = ChatSession.objects.create(
+            student=request.user, school=school, topic=topic, title=question[:200]
+        )
+    return session
+
+
 def run_ask(request, data):
     """Non-streaming ask. Returns (payload, status_code, cache_hit)."""
     if not gemini_configured():
@@ -141,10 +204,12 @@ def run_ask(request, data):
     topic, level, session_id, source, cache_hit = _get_answer(request, data)
     question = sanitize_text(data['question'])
 
+    school = _resolve_school(request)
+    session, history = _history_for_session(session_id, request.user, school=school)
+
     if cache_hit:
         answer = source
     else:
-        session, history = _history_for_session(session_id, request.user)
         try:
             answer = ask_gemini(source[0], history=history)
         except Exception as exc:
@@ -153,23 +218,17 @@ def run_ask(request, data):
             return _error_payload(code, message), status, False
         cache.set(_cache_key(topic, question, level), answer, CACHE_TTL_SECONDS)
 
-    session, _ = _history_for_session(session_id, request.user)
-    if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
-    _persist_messages(session, question, answer)
-    track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
-
-    return (
-        {
-            'session_id': session.id,
-            'topic': topic,
-            'level': level,
-            'answer': answer,
-            'cached': cache_hit,
-        },
-        200,
-        cache_hit,
+    session = _ensure_session(request, session, topic, question, school)
+    _persist_messages(session, question, answer, None)
+    track_event(
+        request.user,
+        'ai_tutor_ask',
+        school=school,
+        metadata={'topic': topic, 'session_id': session.id},
     )
+
+    visible, _geo, _refusal, payload = _build_payload(session, topic, level, answer, cache_hit)
+    return payload, 200, cache_hit
 
 
 def run_ask_stream(request, data):
@@ -187,12 +246,15 @@ def run_ask_stream(request, data):
     key = _cache_key(topic, question, level)
     cached = cache.get(key)
 
+    school = _resolve_school(request)
+    session, history = _history_for_session(session_id, request.user, school=school)
+
     if cached:
         answer = cached
         for token in _chunk(answer):
             yield f'data: {json.dumps({"token": token})}\n\n'
+        visible, geogebra, is_refusal, _payload = _build_payload(None, topic, level, answer, True)
     else:
-        session, history = _history_for_session(session_id, request.user)
         prompt = math_tutor_prompt(topic=topic, question=question, level=level, context=context)
         try:
             chunks = []
@@ -209,14 +271,28 @@ def run_ask_stream(request, data):
             # partial answer is worth keeping.
             yield _sse_error(code, message)
             return
+        visible, geogebra, is_refusal, _payload = _build_payload(None, topic, level, answer, False)
 
-    session, _ = _history_for_session(session_id, request.user)
-    if session is None:
-        session = ChatSession.objects.create(student=request.user, topic=topic, title=question[:200])
-    _persist_messages(session, question, answer)
-    track_event(request.user, 'ai_tutor_ask', metadata={'topic': topic, 'session_id': session.id})
+    # Emit the sketch event before persisting/done, only for real answers.
+    if geogebra:
+        yield f'event: geogebra\ndata: {json.dumps({"geogebra": geogebra})}\n\n'
 
-    yield f'event: done\ndata: {json.dumps({"session_id": session.id})}\n\n'
+    session = _ensure_session(request, session, topic, question, school)
+    _persist_messages(session, question, answer, None)
+    track_event(
+        request.user,
+        'ai_tutor_ask',
+        school=school,
+        metadata={'topic': topic, 'session_id': session.id},
+    )
+
+    # Safety-net duplicate of the geogebra event.
+    done_payload = {
+        'session_id': session.id,
+        'is_refusal': is_refusal,
+        'geogebra': geogebra,
+    }
+    yield f'event: done\ndata: {json.dumps(done_payload)}\n\n'
 
 
 def _sse_error(code: str, message: str) -> str:

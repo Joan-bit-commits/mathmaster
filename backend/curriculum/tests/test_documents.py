@@ -2,8 +2,11 @@ from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from rest_framework.test import APIClient
 
 from accounts.models import User
+from memberships.models import Membership
+from schools.models import School
 from curriculum.models import Document, DocumentChatSession, DocumentChunk
 from curriculum.services import (
     _resolve_document_session,
@@ -16,12 +19,14 @@ from curriculum.services import (
 class DocumentTests(TestCase):
     def test_chunks_are_created_from_text(self):
         user = User.objects.create_user(username='owner', password='StrongPass1!')
+        school = School.objects.create(name='Chunk School', slug='chunk-school', contact_email='owner@example.com', created_by=user)
+        Membership.objects.create(user=user, school=school, role='owner')
         document = Document.objects.create(
-            owner=user, title='Notes', file=SimpleUploadedFile('notes.pdf', b'%PDF'), file_size=4
+            owner=user, school=school, title='Notes', file=SimpleUploadedFile('notes.pdf', b'%PDF'), file_size=4
         )
         DocumentChunk.objects.bulk_create(
             [
-                DocumentChunk(document=document, **item)
+                DocumentChunk(document=document, school=school, **item)
                 for item in chunk_text('A paragraph about linear equations.')
             ]
         )
@@ -57,26 +62,43 @@ class DocumentSessionContinuityTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='student1', password='StrongPass1!')
         self.other_user = User.objects.create_user(username='student2', password='StrongPass1!')
+        self.school = School.objects.create(name='Document School', slug='document-school', contact_email='owner@example.com', created_by=self.user)
+        Membership.objects.create(user=self.user, school=self.school, role='owner')
+        Membership.objects.create(user=self.other_user, school=self.school, role='student')
+        self.user.current_school = self.school
+        self.user.save(update_fields=['current_school'])
+        self.other_user.current_school = self.school
+        self.other_user.save(update_fields=['current_school'])
         self.document = Document.objects.create(
-            owner=self.user, title='Notes', file=SimpleUploadedFile('notes.pdf', b'%PDF'), file_size=4
+            owner=self.user, school=self.school, title='Notes', file=SimpleUploadedFile('notes.pdf', b'%PDF'), file_size=4
         )
         DocumentChunk.objects.create(
-            document=self.document, chunk_index=0, page_number=1,
+            document=self.document, school=self.school, chunk_index=0, page_number=1,
             content='Linear equations: isolate x by doing the same operation on both sides.',
             token_count=12,
         )
 
     def test_existing_session_is_reused(self):
-        session = DocumentChatSession.objects.create(document=self.document, user=self.user)
+        session = DocumentChatSession.objects.create(document=self.document, school=self.school, user=self.user)
         resolved = _resolve_document_session(self.document, self.user, session.id)
         self.assertEqual(resolved.id, session.id)
+
+    def test_session_detail_uses_session_id_url_parameter(self):
+        session = DocumentChatSession.objects.create(document=self.document, school=self.school, user=self.user)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        response = client.get(f'/api/documents/{self.document.id}/sessions/{session.id}/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['id'], session.id)
 
     def test_unknown_session_id_creates_a_new_session_instead_of_erroring(self):
         resolved = _resolve_document_session(self.document, self.user, 999999, question='hi')
         self.assertIsNotNone(resolved.id)
 
     def test_session_owned_by_another_user_is_not_reused(self):
-        foreign_session = DocumentChatSession.objects.create(document=self.document, user=self.other_user)
+        foreign_session = DocumentChatSession.objects.create(document=self.document, school=self.school, user=self.other_user)
         resolved = _resolve_document_session(self.document, self.user, foreign_session.id)
         self.assertNotEqual(resolved.id, foreign_session.id)
 

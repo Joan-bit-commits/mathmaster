@@ -76,8 +76,10 @@ class ChatSessionListView(generics.ListAPIView):
     serializer_class = ChatSessionSerializer
 
     def get_queryset(self):
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
         return (
             ChatSession.objects.filter(student=self.request.user)
+            .filter(school=school)
             .annotate(message_count=Count('messages'))
             .order_by('-updated_at')
         )
@@ -91,6 +93,7 @@ class ChatSessionDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = ChatSessionDetailSerializer
 
     def get_queryset(self):
-        return ChatSession.objects.filter(student=self.request.user).annotate(
+        school = getattr(self.request, 'school', None) or getattr(self.request.user, 'current_school', None)
+        return ChatSession.objects.filter(student=self.request.user, school=school).annotate(
             message_count=Count('messages')
         )

@@ -290,11 +290,8 @@ function DocPanel() {
   const { documents, setDocuments } = useDocumentsStore();
 
   useEffect(() => {
-    if (documents.length === 0) {
-      fetchDocuments().then(setDocuments);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchDocuments().then(setDocuments);
+  }, [setDocuments]);
 
   return (
     <FlatList

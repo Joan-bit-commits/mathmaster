@@ -13,31 +13,38 @@ from .models import DailyStreak, LearningEvent, Recommendation
 PERIODS = {'7d': 7, '30d': 30}
 
 
-def generate_recommendations(student):
+def generate_recommendations(student, school=None):
     """Rule-based v1: topics with avg score < threshold and >= 1 attempt,
     capped and ordered by lowest score. Replaces this student's active set."""
     from learning.models import Topic
+
+    if school is None:
+        membership = student.memberships.filter(is_active=True).select_related('school').first()
+        school = membership.school if membership else getattr(student, 'current_school', None)
+    if school is None:
+        return []
 
     threshold = settings.RECOMMENDATION_MIN_AVG_SCORE
     max_items = settings.RECOMMENDATION_MAX_ITEMS
 
     per_topic = (
-        Attempt.objects.filter(student=student)
+        Attempt.objects.filter(student=student, school=school, quiz__lesson__topic__school=school)
         .values('quiz__lesson__topic')
         .annotate(avg_score=Avg('score'), attempts=Count('id'))
         .filter(attempts__gte=1, avg_score__lt=threshold)
         .order_by('avg_score')[:max_items]
     )
 
-    Recommendation.objects.filter(student=student).delete()
+    Recommendation.objects.filter(student=student, school=school).delete()
     recs = []
     for row in per_topic:
-        topic = Topic.objects.filter(id=row['quiz__lesson__topic']).first()
+        topic = Topic.objects.filter(id=row['quiz__lesson__topic'], school=school).first()
         if topic is None:
             continue
         recs.append(
             Recommendation(
                 student=student,
+                school=school,
                 topic=topic,
                 average_score=round(row['avg_score'], 1),
                 recommendation_text=(
@@ -50,13 +57,13 @@ def generate_recommendations(student):
     return recs
 
 
-def _streak_count(student) -> int:
+def _streak_count(student, school=None) -> int:
     """Consecutive days ending today (or yesterday) with any recorded activity."""
     today = timezone.localdate()
     dates = set(
-        DailyStreak.objects.filter(student=student, date__gt=today - timedelta(days=400)).values_list(
-            'date', flat=True
-        )
+        DailyStreak.objects.filter(
+            student=student, school=school, date__gt=today - timedelta(days=400)
+        ).values_list('date', flat=True)
     )
     if not dates:
         return 0
@@ -68,11 +75,18 @@ def _streak_count(student) -> int:
     return streak
 
 
-def get_active_recommendations(student):
+def get_active_recommendations(student, school=None):
     """Persisted recommendations not older than the TTL."""
     ttl_days = settings.RECOMMENDATION_TTL_DAYS
+    if school is None:
+        membership = student.memberships.filter(is_active=True).select_related('school').first()
+        school = membership.school if membership else getattr(student, 'current_school', None)
+    if school is None:
+        return Recommendation.objects.none()
     cutoff = timezone.now() - timedelta(days=ttl_days)
-    return Recommendation.objects.filter(student=student, created_at__gte=cutoff).select_related('topic')
+    return Recommendation.objects.filter(
+        student=student, school=school, created_at__gte=cutoff
+    ).select_related('topic')
 
 
 def student_summary(student, period='all'):

@@ -13,9 +13,11 @@ class TestDocumentAskStream:
     single JSON body that the client's SSE reader could never make sense of."""
 
     def _make_document(self, student):
-        document = Document.objects.create(owner=student, title='Notes', file_size=4)
+        document = Document.objects.create(
+            owner=student, school=student.current_school, title='Notes', file_size=4
+        )
         DocumentChunk.objects.create(
-            document=document, chunk_index=0, page_number=3,
+            document=document, school=document.school, chunk_index=0, page_number=3,
             content='To solve 2x + 5 = 13, subtract 5 then divide by 2 to get x = 4.',
             token_count=15,
         )
@@ -78,7 +80,9 @@ class TestDocumentAskStream:
 
     def test_reuses_session_id_passed_by_the_client(self, student_client, student):
         document = self._make_document(student)
-        existing_session = DocumentChatSession.objects.create(document=document, user=student)
+        existing_session = DocumentChatSession.objects.create(
+            document=document, school=document.school, user=student
+        )
 
         with mock.patch('curriculum.services.gemini_configured', return_value=False):
             resp = student_client.post(

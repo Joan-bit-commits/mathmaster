@@ -3,6 +3,7 @@ export const useDocumentsStore = create((set) => ({
   documents: [],
   uploadingDocs: {},
   setDocuments: (documents) => set({ documents }),
+  clearDocuments: () => set({ documents: [], uploadingDocs: {} }),
   addDocument: (document) =>
     set((state) => ({ documents: [document, ...state.documents] })),
   updateDocument: (id, patch) =>
