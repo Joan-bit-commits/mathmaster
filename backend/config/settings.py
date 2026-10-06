@@ -213,7 +213,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # ---------------------------------------------------------------------------
 
 GENAI_API_KEY = config('GENAI_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.6-flash')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.5-flash-lite')
 GEMINI_RATE_LIMIT_RPM = config('GEMINI_RATE_LIMIT_RPM', default=5, cast=int)
 
 # ---------------------------------------------------------------------------
