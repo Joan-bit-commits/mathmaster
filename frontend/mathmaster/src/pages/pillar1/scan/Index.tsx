@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScanImage } from '@/components/pillar1/ScanImage';
 import { useQuery } from '@tanstack/react-query';
 import { fetchScanHistory } from '@/services/scan';
 import { mockScanJobs } from '@/mocks/pillar1Mocks';
@@ -55,8 +56,8 @@ export default function ScanIndex() {
               <Link key={scan.id} to={`/scan/result?id=${scan.id}`}>
                 <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                   <Card hover className="w-64 shrink-0 p-4">
-                    <div className="flex h-32 items-center justify-center rounded-xl bg-ink-100 dark:bg-ink-800">
-                      <Camera className="h-8 w-8 text-ink-300" />
+                    <div className="h-32 overflow-hidden rounded-xl bg-ink-100 dark:bg-ink-800">
+                      <ScanImage scanId={scan.id} width={480} />
                     </div>
                     <p className="mt-3 line-clamp-1 text-sm font-semibold text-ink-900 dark:text-ink-100">{scan.problem_text}</p>
                     <div className="mt-2 flex items-center justify-between">

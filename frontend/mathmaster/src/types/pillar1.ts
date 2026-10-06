@@ -82,6 +82,7 @@ export type DocumentItem = {
   title: string;
   document_type: 'textbook' | 'past_paper' | 'notes' | 'worksheet' | 'other';
   file_url: string;
+  file_type?: 'pdf' | 'image';
   page_count: number;
   processing_status: 'pending' | 'processing' | 'ready' | 'failed';
   created_at: string;

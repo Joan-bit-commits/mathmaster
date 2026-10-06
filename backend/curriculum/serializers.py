@@ -30,6 +30,7 @@ class SubjectSerializer(serializers.Serializer):
 
 class DocumentSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
+    file_type = serializers.SerializerMethodField()
 
     class Meta:
         model = Document
@@ -51,6 +52,11 @@ class DocumentSerializer(serializers.ModelSerializer):
         if obj.file and request is not None:
             return request.build_absolute_uri(obj.file.url)
         return obj.file.url if obj.file else ''
+
+    def get_file_type(self, obj):
+        # 'pdf' or 'image' — lets clients pick a PDF viewer vs an image viewer.
+        name = (obj.file.name if obj.file else '').lower()
+        return 'pdf' if name.endswith('.pdf') else 'image'
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
     class Meta:

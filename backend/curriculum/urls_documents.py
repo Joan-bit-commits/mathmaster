@@ -6,6 +6,7 @@ from .views import (
     DocumentChunkDetailView,
     DocumentChunksView,
     DocumentDetailView,
+    DocumentFileView,
     DocumentListCreateView,
     DocumentProcessView,
     DocumentSessionDetailView,
@@ -15,6 +16,7 @@ from .views import (
 urlpatterns = [
     path('', DocumentListCreateView.as_view()),
     path('<int:pk>/', DocumentDetailView.as_view()),
+    path('<int:pk>/file/', DocumentFileView.as_view()),
     path('<int:pk>/process/', DocumentProcessView.as_view()),
     path('<int:pk>/chunks/', DocumentChunksView.as_view()),
     path('<int:pk>/chunks/<int:chunk_id>/', DocumentChunkDetailView.as_view()),

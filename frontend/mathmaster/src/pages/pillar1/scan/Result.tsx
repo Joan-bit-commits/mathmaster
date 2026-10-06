@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TopicContextCard } from '@/components/pillar1/TopicContextCard';
 import { SolutionStep } from '@/components/pillar1/SolutionStep';
 import { ConfidenceIndicator } from '@/components/pillar1/ConfidenceIndicator';
+import { ScanImage } from '@/components/pillar1/ScanImage';
 import { LocalContextPill } from '@/components/pillar1/LocalContextPill';
 import { QuickPromptChips } from '@/components/pillar1/QuickPromptChips';
 import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer';
@@ -46,7 +47,7 @@ export default function ScanResult() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_2fr]">
         <Card className="overflow-hidden p-4">
           <div className="flex items-center justify-center rounded-xl bg-ink-100 dark:bg-ink-800" style={{ minHeight: 200 }}>
-            {scan.image_url ? <img src={scan.image_url} alt="Problem" className="w-full rounded-xl" /> : <Camera className="h-12 w-12 text-ink-300" />}
+            <ScanImage scanId={scan.id} width={1200} alt="Problem" className="h-auto rounded-xl object-contain" />
           </div>
         </Card>
 

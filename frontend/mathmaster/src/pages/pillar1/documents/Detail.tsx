@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MarkdownRenderer } from '@/components/shared/MarkdownRenderer';
 import { QuickPromptChips } from '@/components/pillar1/QuickPromptChips';
 import { CitationChip } from '@/components/pillar1/CitationChip';
+import { DocumentViewer } from '@/components/pillar1/DocumentViewer';
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { fetchDocument, deleteDocument, fetchDocumentSessions, fetchDocumentSession, askDocumentStream } from '@/services/documents';
@@ -39,6 +40,7 @@ export default function DocumentDetail() {
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [loadingSession, setLoadingSession] = React.useState(false);
+  const [readPage, setReadPage] = React.useState(1);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const { data: doc, isLoading, isError, refetch } = useQuery({
@@ -132,11 +134,12 @@ export default function DocumentDetail() {
         </TabsList>
 
         <TabsContent value="read">
-          <Card className="p-6">
-            <div className="flex items-center justify-center rounded-xl bg-ink-100 p-12 dark:bg-ink-800">
-              <FileText className="h-16 w-16 text-ink-300" />
-            </div>
-            <p className="mt-4 text-center text-sm text-ink-400">PDF preview · Page 1 of {doc.page_count}</p>
+          <Card className="p-3">
+            {USE_MOCKS ? (
+              <p className="p-6 text-center text-sm text-ink-400">PDF preview is unavailable in mock mode.</p>
+            ) : (
+              <DocumentViewer documentId={String(doc.id)} fileType={doc.file_type} page={readPage} title={doc.title} />
+            )}
           </Card>
         </TabsContent>
 
@@ -148,7 +151,7 @@ export default function DocumentDetail() {
                 <div key={msg.id} className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   {msg.role === 'assistant' && <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-bold text-white">M</div>}
                   <div className={cn('max-w-2xl', msg.role === 'user' ? 'rounded-2xl rounded-br-md bg-brand-500 px-4 py-2.5 text-sm text-white' : 'rounded-2xl rounded-bl-md border border-ink-200 bg-white px-4 py-2.5 dark:border-ink-700 dark:bg-ink-800')}>
-                    {msg.role === 'user' ? <p className="text-sm">{msg.content}</p> : msg.content === '' ? <ThinkingDots /> : <div><MarkdownRenderer content={msg.content} className="prose-sm" />{msg.citations && msg.citations.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{msg.citations.map((c, i) => <CitationChip key={i} citation={c} />)}</div>}</div>}
+                    {msg.role === 'user' ? <p className="text-sm">{msg.content}</p> : msg.content === '' ? <ThinkingDots /> : <div><MarkdownRenderer content={msg.content} className="prose-sm" />{msg.citations && msg.citations.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{msg.citations.map((c, i) => <CitationChip key={i} citation={c} onOpen={(page) => { setReadPage(page || 1); setMode('read'); }} />)}</div>}</div>}
                   </div>
                 </div>
               ))}

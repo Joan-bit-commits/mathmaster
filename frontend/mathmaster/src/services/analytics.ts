@@ -11,7 +11,20 @@ export async function getSummary(period: string = '30d'): Promise<AnalyticsSumma
     await delay(300);
     return mockAnalyticsSummary;
   }
-  return get(`/api/analytics/summary/?period=${period}`);
+  // The API returns current_streak_days / average_score — map to the shape the UI uses.
+  const raw = await get<Record<string, any>>(`/api/analytics/summary/?period=${period}`);
+  return {
+    lessons_completed: raw.lessons_completed ?? 0,
+    quizzes_taken: raw.quizzes_taken ?? 0,
+    avg_score: raw.avg_score ?? raw.average_score ?? null,
+    current_streak: raw.current_streak ?? raw.current_streak_days ?? 0,
+    topics_covered: raw.topics_covered,
+    ai_questions_asked: raw.ai_questions_asked,
+    longest_streak: raw.longest_streak,
+    total_xp: raw.total_xp,
+    level: raw.level,
+    mastery: raw.mastery,
+  };
 }
 
 // backend endpoint not implemented yet — using mock/fallback data
@@ -49,7 +62,13 @@ export async function getRecommendations(): Promise<Recommendation[]> {
     await delay(300);
     return mockRecommendations;
   }
-  return get('/api/analytics/recommendations/');
+  const data = await get<any>('/api/analytics/recommendations/');
+  const list: any[] = Array.isArray(data) ? data : data?.results ?? [];
+  return list.map((r) => ({
+    topic_id: String(r.topic_id ?? r.topic ?? ''),
+    topic_name: r.topic_name ?? '',
+    reason: r.reason ?? r.recommendation_text ?? '',
+  }));
 }
 
 // backend endpoint not implemented yet — using mock/fallback data
