@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSchoolStore } from '@/stores/schoolStore';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { canCreateSchool } from '@/lib/permissions';
 import type { MembershipRole } from '@/types/school';
 
 const roleLabels: Record<MembershipRole, string> = {
@@ -43,7 +44,9 @@ export function SchoolSwitcher({ collapsed = false, onNavigate }: { collapsed?: 
   const memberships = useSchoolStore((s) => s.memberships);
   const isLoading = useSchoolStore((s) => s.isLoading);
   const switchSchool = useSchoolStore((s) => s.switchSchool);
-  const userRole = useAuthStore((s) => s.user?.role);
+  const user = useAuthStore((s) => s.user);
+  const userRole = user?.role;
+  const mayCreate = canCreateSchool(user);
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -163,12 +166,14 @@ export function SchoolSwitcher({ collapsed = false, onNavigate }: { collapsed?: 
             <div className="my-1 border-t border-ink-100 dark:border-ink-700" />
             <button role="menuitem" onClick={() => { setOpen(false); onNavigate?.(); navigate('/join-school'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-ink-50 dark:hover:bg-ink-700">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400"><Plus className="h-4 w-4" /></div>
-              <span className="text-sm font-medium text-brand-600 dark:text-brand-400">Join another school</span>
+              <span className="text-sm font-medium text-brand-600 dark:text-brand-400">Join with a class code</span>
             </button>
-            <button role="menuitem" onClick={() => { setOpen(false); onNavigate?.(); navigate('/onboarding'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-ink-50 dark:hover:bg-ink-700">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><Users className="h-4 w-4" /></div>
-              <span className="text-sm font-medium text-ink-700 dark:text-ink-300">Create new school</span>
-            </button>
+            {mayCreate && (
+              <button role="menuitem" onClick={() => { setOpen(false); onNavigate?.(); navigate('/onboarding'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-ink-50 dark:hover:bg-ink-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><Users className="h-4 w-4" /></div>
+                <span className="text-sm font-medium text-ink-700 dark:text-ink-300">Create new school</span>
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

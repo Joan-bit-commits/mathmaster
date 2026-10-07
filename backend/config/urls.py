@@ -32,6 +32,8 @@ router.register(r'schools', SchoolViewSet, basename='school')
 router.register(r'schools/(?P<school_id>[^/.]+)/class-codes', ClassCodeViewSet, basename='class-code')
 
 urlpatterns = [
+    # Must precede the router: otherwise `schools/<pk>/` swallows "join-by-code" and POST returns 405.
+    path('api/schools/join-by-code/', JoinSchoolByCodeView.as_view(), name='join-school'),
     path('api/', include(router.urls)),
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -46,7 +48,6 @@ urlpatterns = [
     path('api/scan/', include('curriculum.urls_scan')),
     path('api/teacher/past-papers/', include('curriculum.urls_past_papers')),
     path('api/health/', health, name='health'),
-    path('api/schools/join-by-code/', JoinSchoolByCodeView.as_view(), name='join-school'),
     path(
         'api/schools/<int:school_id>/members/bulk-import/',
         BulkImportStudentsView.as_view(),

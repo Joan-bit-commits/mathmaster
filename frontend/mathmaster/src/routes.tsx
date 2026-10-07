@@ -110,8 +110,8 @@ export default function AppRoutes() {
       <Route path="/admin/settings" element={<ProtectedRoute roles={['owner', 'admin']}><AdminSettings /></ProtectedRoute>} />
 
       {/* Onboarding & join */}
-      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/join-school" element={<JoinSchool />} />
+      <Route path="/onboarding" element={<ProtectedRoute accountRoles={['teacher', 'admin']}><Onboarding /></ProtectedRoute>} />
+      <Route path="/join-school" element={<ProtectedRoute><JoinSchool /></ProtectedRoute>} />
 
       {/* Shared */}
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

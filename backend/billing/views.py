@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from memberships.permissions import IsSchoolAdmin
+from memberships.permissions import IsSchoolAdmin, school_manager_membership
 from schools.models import School
 
 from .models import SubscriptionPlan
@@ -52,9 +52,7 @@ class CheckoutSessionView(APIView):
 
     def post(self, request):
         school = School.objects.get(id=request.data.get('school_id'))
-        if not request.user.memberships.filter(
-            school=school, role__in=('owner', 'admin'), is_active=True
-        ).exists():
+        if school_manager_membership(request.user, school) is None:
             return Response({'error': 'Forbidden'}, status=403)
         plan = SubscriptionPlan.objects.get(slug=request.data.get('plan_id'))
         url = create_checkout_session(

@@ -31,6 +31,7 @@ import { useSchoolStore } from '@/stores/schoolStore';
 import { useSearchStore } from '@/stores/searchStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn } from '@/lib/utils';
+import { canManageSchool } from '@/lib/permissions';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -145,7 +146,7 @@ function SidebarContent({
   const school = useSchoolStore((s) => s.currentSchool);
 
   const mainNav = user?.role === 'teacher' ? teacherNav : studentNav;
-  const canAdminister = membership?.role === 'owner' || membership?.role === 'admin';
+  const canAdminister = canManageSchool(user, membership);
   const initials = (user?.first_name || user?.username || 'M').slice(0, 1).toUpperCase();
   const profileHref = user?.role === 'teacher' ? '/teacher/profile' : '/profile';
   const displayRole = roleLabel(membership?.role ?? user?.role);
