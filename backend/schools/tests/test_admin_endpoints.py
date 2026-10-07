@@ -27,7 +27,7 @@ def school(db):
 def owner_client(db, school):
     from accounts.models import User
 
-    user = User.objects.create_user(username='adm', email='adm@t.com', password='Pass1234!')
+    user = User.objects.create_user(username='adm', email='adm@t.com', password='Pass1234!', role='teacher')
     Membership.objects.create(user=user, school=school, role='owner', is_active=True)
     client = APIClient()
     client.force_authenticate(user=user)

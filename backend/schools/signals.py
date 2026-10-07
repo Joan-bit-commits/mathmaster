@@ -50,7 +50,9 @@ def _personal_school(user):
     user.save(update_fields=['current_school'])
     from memberships.models import Membership
 
-    Membership.objects.get_or_create(user=user, school=school, defaults={'role': 'owner'})
+    # Student accounts get a personal workspace but never ownership/management of it.
+    role = 'student' if user.role == 'student' else 'owner'
+    Membership.objects.get_or_create(user=user, school=school, defaults={'role': role})
     return school
 
 

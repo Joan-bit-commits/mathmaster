@@ -18,9 +18,9 @@ class BulkImportStudentsView(APIView):
 
     def post(self, request, school_id):
         school = School.objects.filter(id=school_id).first()
-        membership = request.user.memberships.filter(
-            school=school, role__in=('owner', 'admin'), is_active=True
-        ).first()
+        from memberships.permissions import school_manager_membership
+
+        membership = school_manager_membership(request.user, school)
         if not school or not membership:
             return Response({'error': 'Forbidden'}, status=403)
         file = request.FILES.get('file')

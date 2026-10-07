@@ -27,7 +27,7 @@ from billing.models import Invoice, Subscription
 from classes.models import SchoolClass
 from invitations.models import Invitation
 from memberships.models import Membership
-from memberships.permissions import IsSchoolAdmin
+from memberships.permissions import IsSchoolAdmin, school_manager_membership
 
 from .models import AuditLog, ClassCode
 from .serializers import (
@@ -50,9 +50,7 @@ def record_audit(school, actor, action, target='', metadata=None):
 
 def _admin_membership(user, school):
     """Return the user's owner/admin membership for the school, or None."""
-    return Membership.objects.filter(
-        user=user, school=school, role__in=('owner', 'admin'), is_active=True
-    ).first()
+    return school_manager_membership(user, school)
 
 
 class SchoolAdminMixin:
@@ -99,10 +97,16 @@ class SchoolClassesView(APIView):
         return Response(SchoolClassSerializer(cls, context={'request': request}).data, status=201)
 
 
-class SchoolClassDetailView(generics.RetrieveUpdateDestroyAPIView):
+class SchoolClassDetailView(SchoolAdminMixin, generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        school = get_object_or_404(SchoolForAdmin, id=self.kwargs['school_id'])
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            if not self.request.user.memberships.filter(school=school, is_active=True).exists():
+                self.permission_denied(self.request, message='Not a member of this school.')
+        else:
+            self.get_school(self.request, self.kwargs['school_id'])  # managers only
         return SchoolClass.objects.filter(school_id=self.kwargs['school_id'], is_archived=False)
 
     def get_serializer(self, *args, **kwargs):
@@ -134,12 +138,13 @@ class AssignClassTeacherView(APIView):
         return Response(SchoolClassSerializer(cls, context={'request': request}).data)
 
 
-class SchoolInvitationsView(generics.ListAPIView):
+class SchoolInvitationsView(SchoolAdminMixin, generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = None  # plain dict shape below matches the web Invitation type
 
     def get_queryset(self):
-        school = get_object_or_404(SchoolForAdmin, id=self.kwargs['school_id'])
+        # Invitation tokens are accept-credentials: managers only.
+        school = self.get_school(self.request, self.kwargs['school_id'])
         qs = Invitation.objects.filter(school=school)
         status_filter = self.request.query_params.get('status')
         if status_filter and status_filter != 'all':
@@ -253,14 +258,12 @@ class InvitationDetailView(APIView):
         return Response(SchoolInvitationsView._serialize(inv))
 
 
-class AuditLogsView(generics.ListAPIView):
+class AuditLogsView(SchoolAdminMixin, generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AuditLogSerializer
 
     def get_queryset(self):
-        school = get_object_or_404(SchoolForAdmin, id=self.kwargs['school_id'])
-        if not request_is_member(self.request.user, school):
-            return AuditLog.objects.none()
+        school = self.get_school(self.request, self.kwargs['school_id'])
         qs = school.audit_logs.all()
         action = self.request.query_params.get('action')
         if action:
@@ -280,8 +283,8 @@ class SchoolSubscriptionView(APIView):
 
     def get(self, request, school_id):
         school = get_object_or_404(SchoolForAdmin, id=school_id)
-        if not request_is_member(request.user, school):
-            return Response({'error': {'code': 'FORBIDDEN', 'message': 'Not a member of this school.'}}, status=403)
+        if _admin_membership(request.user, school) is None:
+            return Response({'error': {'code': 'FORBIDDEN', 'message': 'Only school admins can view billing.'}}, status=403)
         subscription = self._ensure_subscription(school)
         return Response(SubscriptionSerializer(subscription, context={'request': request}).data)
 
@@ -323,14 +326,12 @@ class CancelSubscriptionView(APIView):
         return Response({'status': 'canceled'})
 
 
-class SchoolInvoicesView(generics.ListAPIView):
+class SchoolInvoicesView(SchoolAdminMixin, generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = InvoiceSerializer
 
     def get_queryset(self):
-        school = get_object_or_404(SchoolForAdmin, id=self.kwargs['school_id'])
-        if not request_is_member(self.request.user, school):
-            return Invoice.objects.none()
+        school = self.get_school(self.request, self.kwargs['school_id'])
         return school.invoices.all()
 
 
@@ -364,8 +365,9 @@ class CurrentClassCodeView(APIView):
 
     def get(self, request, school_id):
         school = get_object_or_404(SchoolForAdmin, id=school_id)
-        if not request_is_member(request.user, school):
-            return Response({'error': {'code': 'FORBIDDEN', 'message': 'Not a member of this school.'}}, status=403)
+        # The join code grants membership, so only school admins may read it.
+        if _admin_membership(request.user, school) is None:
+            return Response({'error': {'code': 'FORBIDDEN', 'message': 'Only school admins can view the class code.'}}, status=403)
         code = ClassCode.objects.filter(school=school, is_active=True).order_by('-created_at').first()
         if not code:
             return Response({'error': {'code': 'NOT_FOUND', 'message': 'No active class code. Generate one first.'}}, status=404)

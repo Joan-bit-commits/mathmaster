@@ -10,7 +10,13 @@ from rest_framework.response import Response
 from billing.models import Subscription, SubscriptionPlan
 from billing.services import get_usage_summary
 from memberships.models import Membership
-from memberships.permissions import IsSchoolAdmin
+from memberships.permissions import (
+    CanCreateSchool,
+    CanManageThisSchool,
+    CanViewSchoolRoster,
+    IsSchoolAdmin,
+    is_student_account,
+)
 from memberships.serializers import MembershipSerializer
 
 from .models import ClassCode, School
@@ -36,11 +42,14 @@ class SchoolViewSet(viewsets.ModelViewSet):
         return SchoolDetailSerializer if self.action == 'retrieve' else super().get_serializer_class()
 
     def get_permissions(self):
-        return (
-            [IsAuthenticated(), IsSchoolAdmin()]
-            if self.action in ('update', 'partial_update', 'destroy')
-            else [IsAuthenticated()]
-        )
+        # Students (by account type) can read their schools but never create or manage one.
+        if self.action == 'create':
+            return [IsAuthenticated(), CanCreateSchool()]
+        if self.action in ('update', 'partial_update', 'destroy', 'usage'):
+            return [IsAuthenticated(), CanManageThisSchool()]
+        if self.action == 'members':
+            return [IsAuthenticated(), CanViewSchoolRoster()]
+        return [IsAuthenticated()]
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -125,6 +134,11 @@ class JoinSchoolByCodeView(generics.GenericAPIView):
             return Response({'error': 'Invalid code'}, status=status.HTTP_404_NOT_FOUND)
         if not class_code.is_valid():
             return Response({'error': 'Code expired or no longer valid'}, status=status.HTTP_400_BAD_REQUEST)
+        if is_student_account(request.user) and class_code.target_role not in ('student', 'parent'):
+            return Response(
+                {'error': 'Student accounts can only join a school as a student.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         membership, _ = Membership.objects.get_or_create(
             user=request.user, school=class_code.school, defaults={'role': class_code.target_role}
         )

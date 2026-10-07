@@ -7,19 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { joinSchoolByCode } from '@/services/schools';
 import { parseApiError } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+import { homePathFor } from '@/lib/permissions';
 
 export default function JoinSchool() {
   const navigate = useNavigate();
   const [code, setCode] = React.useState('');
   const [joining, setJoining] = React.useState(false);
+  const user = useAuthStore((state) => state.user);
 
   const handleJoin = async () => {
     if (!code.trim()) { toast.error('Enter a class code'); return; }
     setJoining(true);
     try {
       await joinSchoolByCode(code);
+      await useAuthStore.getState().refreshProfile(); // pick up the new school + membership
       toast.success('Joined school successfully!');
-      navigate('/dashboard');
+      navigate(homePathFor(user));
     } catch (err) { toast.error(parseApiError(err)); }
     setJoining(false);
   };

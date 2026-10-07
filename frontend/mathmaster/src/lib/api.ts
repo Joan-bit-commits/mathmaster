@@ -234,7 +234,8 @@ export async function streamSSE(
 
 export function parseApiError(err: unknown): string {
   if (err && typeof err === 'object' && 'error' in err) {
-    const errorObj = (err as { error: { message?: string } }).error;
+    const errorObj = (err as { error: { message?: string } | string }).error;
+    if (typeof errorObj === 'string') return errorObj;
     if (errorObj?.message) return errorObj.message;
   }
   if (err instanceof Error) return err.message;

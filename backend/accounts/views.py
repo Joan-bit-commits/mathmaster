@@ -35,9 +35,18 @@ class RegisterView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        invite_token = request.data.get('invite_token')
+        if invite_token and serializer.validated_data.get('role', 'student') == 'student':
+            from invitations.models import Invitation
+
+            pending = Invitation.objects.filter(token=invite_token, status='pending').first()
+            if pending and pending.role not in ('student', 'parent'):
+                return Response(
+                    {'error': 'This invitation is for a staff role. Register a teacher account to accept it.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         with transaction.atomic():
             user = serializer.save()
-            invite_token = request.data.get('invite_token')
             if invite_token:
                 from invitations.models import Invitation
 
