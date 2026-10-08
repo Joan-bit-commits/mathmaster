@@ -9,6 +9,7 @@ import { Stat } from '@/components/ui/stat';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/components/shared/Section';
+import { ActionTile } from '@/components/ui/action-tile';
 import { LoadingSkeleton, TopicsGridSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,6 +25,8 @@ export default function TeacherDashboard() {
 
   const contentGaps = topics.filter((t) => t.lessons_count === 0 || t.quizzes_count === 0);
   const featuredTopic = topics[0];
+  // Share of topics that have at least one lesson and one quiz.
+  const coveragePct = topics.length ? Math.round(((topics.length - contentGaps.length) / topics.length) * 100) : 0;
 
   if (overviewQuery.isLoading) return <AppShell><div className="mt-6"><LoadingSkeleton variant="hero" /></div><div className="mt-6"><TopicsGridSkeleton /></div></AppShell>;
   if (overviewQuery.isError) return <AppShell><ErrorState onRetry={() => void overviewQuery.refetch()} message="Could not load your dashboard." /></AppShell>;
@@ -31,17 +34,17 @@ export default function TeacherDashboard() {
   return (
     <AppShell>
       {/* Hero */}
-      <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink-900 to-ink-800 p-6 shadow-hero sm:p-8">
+      <div className="overflow-hidden rounded-[2rem] bg-ink-900 p-6 sm:p-8">
         <p className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Welcome, {user?.first_name ?? 'Teacher'}</p>
         <p className="mt-2 text-base text-ink-300">Build and track your MathMaster curriculum</p>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <p className="text-xs font-medium text-ink-400">Coverage</p>
-            <p className="mt-1 text-2xl font-bold text-brand-300">{ov?.coverage}%</p>
+            <p className="text-xs font-medium text-ink-400">Topics fully covered</p>
+            <p className="mt-1 text-2xl font-bold text-brand-300">{coveragePct}%</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
             <p className="text-xs font-medium text-ink-400">Active students</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-300">{ov?.active_students_7d}</p>
+            <p className="mt-1 text-2xl font-bold text-white">{ov?.active_students_7d}</p>
             <p className="mt-0.5 text-xs text-ink-400">last 7 days</p>
           </div>
         </div>
@@ -56,11 +59,11 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link to="/teacher/content/topics/new"><motion.div whileHover={{ y: -4 }} className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 p-5 text-white shadow-soft"><Plus className="h-7 w-7" /><div><p className="font-semibold">Add topic</p><p className="text-sm text-white/75">Create a new topic</p></div></motion.div></Link>
-        <Link to="/teacher/content/lessons/new"><motion.div whileHover={{ y: -4 }} className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-accent-500 to-indigo-600 p-5 text-white shadow-soft"><Plus className="h-7 w-7" /><div><p className="font-semibold">Add lesson</p><p className="text-sm text-white/75">Write a new lesson</p></div></motion.div></Link>
-        <Link to="/teacher/content/quizzes/new"><motion.div whileHover={{ y: -4 }} className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 text-white shadow-soft"><Plus className="h-7 w-7" /><div><p className="font-semibold">Add quiz</p><p className="text-sm text-white/75">Create a quiz</p></div></motion.div></Link>
-        <Link to="/teacher/past-paper"><motion.div whileHover={{ y: -4 }} className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 text-white shadow-soft"><ScanLine className="h-7 w-7" /><div><p className="font-semibold">Past Paper → Quiz</p><p className="text-sm text-white/75">Extract from PDF</p></div></motion.div></Link>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ActionTile icon={Plus} title="Add topic" description="Create a new topic" to="/teacher/content/topics/new" />
+        <ActionTile icon={Plus} title="Add lesson" description="Write a new lesson" to="/teacher/content/lessons/new" />
+        <ActionTile icon={Plus} title="Add quiz" description="Create a quiz" to="/teacher/content/quizzes/new" />
+        <ActionTile icon={ScanLine} title="Past paper to quiz" description="Turn a paper into questions" to="/teacher/past-paper" />
       </div>
 
       {/* Curriculum map + Featured */}

@@ -14,7 +14,19 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function getTeacherOverview(): Promise<TeacherOverview> {
   if (USE_MOCKS) { await delay(300); return mockTeacherOverview; }
-  return get('/api/analytics/teacher/overview/');
+  // The API nests counts under `coverage` and names fields differently from the UI type — map them here.
+  // (Rendering `coverage` directly crashed the dashboard: it is an object, not a number.)
+  const raw = await get<Record<string, any>>('/api/analytics/teacher/overview/');
+  const counts = raw.coverage && typeof raw.coverage === 'object' ? raw.coverage : {};
+  return {
+    topics_count: raw.topics_count ?? counts.topics ?? 0,
+    lessons_count: raw.lessons_count ?? counts.lessons ?? 0,
+    quizzes_count: raw.quizzes_count ?? counts.quizzes ?? 0,
+    students_count: raw.students_count ?? raw.total_students ?? 0,
+    new_students_this_week: raw.new_students_this_week ?? 0,
+    coverage: typeof raw.coverage === 'number' ? raw.coverage : 0,
+    active_students_7d: raw.active_students_7d ?? raw.active_7d ?? 0,
+  };
 }
 
 // backend endpoint not implemented yet — using mock/fallback data

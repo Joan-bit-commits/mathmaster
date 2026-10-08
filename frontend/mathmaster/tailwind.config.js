@@ -5,21 +5,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        // One brand hue. Steps 500-700 are deliberately deep enough for white text (WCAG AA at 600+).
         brand: {
           50: '#F0F9FF',
           100: '#E0F2FE',
           200: '#BAE6FD',
           300: '#7DD3FC',
           400: '#38BDF8',
-          500: '#0EA5E9',
-          600: '#0284C7',
-          700: '#0369A1',
-          800: '#075985',
-          900: '#0C4A6E',
+          500: '#0284C7',
+          600: '#0369A1',
+          700: '#075985',
+          800: '#0C4A6E',
+          900: '#082F49',
         },
+        // Kept only so older class names still compile; it is the brand colour, not a second hue.
         accent: {
-          500: '#6366F1',
-          600: '#4F46E5',
+          500: '#0284C7',
+          600: '#0369A1',
         },
         success: '#10B981',
         warning: '#F59E0B',
@@ -45,10 +47,10 @@ export default {
         '5xl': '2.5rem',
       },
       boxShadow: {
-        soft: '0 4px 20px rgba(15,23,42,0.06)',
-        card: '0 8px 30px rgba(15,23,42,0.08)',
-        hero: '0 24px 80px rgba(15,23,42,0.18)',
-        'glow-brand': '0 0 40px rgba(14,165,233,0.25)',
+        soft: '0 1px 2px rgba(15,23,42,0.06)',
+        card: '0 4px 16px rgba(15,23,42,0.08)',
+        hero: '0 8px 24px rgba(15,23,42,0.12)',
+        'glow-brand': '0 0 0 4px rgba(2,132,199,0.12)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

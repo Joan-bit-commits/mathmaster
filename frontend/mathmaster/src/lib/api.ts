@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosRequestConfig } from 'axios';
+import { parseAuthError } from './authErrors';
 import type { Citation } from '@/types/pillar1';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -233,13 +234,7 @@ export async function streamSSE(
 // ─── Typed error envelope parsing ──────────────────────────────
 
 export function parseApiError(err: unknown): string {
-  if (err && typeof err === 'object' && 'error' in err) {
-    const errorObj = (err as { error: { message?: string } | string }).error;
-    if (typeof errorObj === 'string') return errorObj;
-    if (errorObj?.message) return errorObj.message;
-  }
-  if (err instanceof Error) return err.message;
-  return 'Something went wrong. Please try again.';
+  return parseAuthError(err).message;
 }
 
 export { API_BASE };

@@ -38,11 +38,13 @@
     border-color: rgba(255, 255, 255, 0.08);
   }
 
+  /* Name kept for existing usages; it is a solid brand colour now. */
   .text-gradient-brand {
-    background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: theme('colors.brand.600');
+  }
+
+  .dark .text-gradient-brand {
+    color: theme('colors.brand.300');
   }
 
   .shimmer-bg {

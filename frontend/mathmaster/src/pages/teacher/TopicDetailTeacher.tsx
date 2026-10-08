@@ -120,7 +120,7 @@ export default function TopicDetailTeacher() {
 
       <div className="sticky bottom-0 mt-8 flex items-center justify-between gap-3 border-t border-ink-200 bg-white/80 px-4 py-4 backdrop-blur-xl dark:border-ink-700 dark:bg-ink-900/80">
         <Button variant="ghost" onClick={() => navigate('/teacher/curriculum')}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <Button variant="gradient" onClick={() => navigate(`/teacher/content/lessons/new?topic=${topicId}`)}><Plus className="h-4 w-4" /> Add lesson</Button>
+        <Button variant="primary" onClick={() => navigate(`/teacher/content/lessons/new?topic=${topicId}`)}><Plus className="h-4 w-4" /> Add lesson</Button>
       </div>
 
       {/* Edit dialog */}
@@ -137,7 +137,7 @@ export default function TopicDetailTeacher() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-            <Button variant="gradient" loading={updateTopic.isPending} onClick={handleSave}>Save changes</Button>
+            <Button variant="primary" loading={updateTopic.isPending} onClick={handleSave}>Save changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

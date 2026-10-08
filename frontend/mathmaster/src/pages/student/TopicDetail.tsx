@@ -70,7 +70,7 @@ export default function TopicDetail() {
 
       <div className="sticky bottom-0 mt-8 flex items-center justify-between gap-3 border-t border-ink-200 bg-white/80 px-4 py-4 backdrop-blur-xl dark:border-ink-700 dark:bg-ink-900/80">
         <Button variant="ghost" onClick={() => navigate('/topics')}><ArrowLeft className="h-4 w-4" /> Back to topics</Button>
-        <Button variant="gradient" disabled={!firstIncomplete} onClick={() => firstIncomplete && navigate(`/lessons/${firstIncomplete.id}`)}>
+        <Button variant="primary" disabled={!firstIncomplete} onClick={() => firstIncomplete && navigate(`/lessons/${firstIncomplete.id}`)}>
           {firstIncomplete ? 'Continue learning' : 'All lessons done'}
         </Button>
       </div>

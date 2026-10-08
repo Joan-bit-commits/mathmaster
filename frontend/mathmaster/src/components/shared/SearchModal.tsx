@@ -11,9 +11,9 @@ import type { SearchResult } from '@/types/teacher';
 
 const typeConfig: Record<string, { icon: React.ElementType; bg: string; text: string }> = {
   topic: { icon: Library, bg: 'bg-brand-100 dark:bg-brand-900/40', text: 'text-brand-600 dark:text-brand-300' },
-  lesson: { icon: BookOpen, bg: 'bg-accent-100 dark:bg-indigo-900/40', text: 'text-accent-600 dark:text-indigo-300' },
-  quiz: { icon: ClipboardCheck, bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600 dark:text-amber-300' },
-  student: { icon: GraduationCap, bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-600 dark:text-emerald-300' },
+  lesson: { icon: BookOpen, bg: 'bg-brand-100 dark:bg-brand-900/40', text: 'text-brand-600 dark:text-brand-300' },
+  quiz: { icon: ClipboardCheck, bg: 'bg-brand-100 dark:bg-brand-900/40', text: 'text-brand-600 dark:text-brand-300' },
+  student: { icon: GraduationCap, bg: 'bg-brand-100 dark:bg-brand-900/40', text: 'text-brand-600 dark:text-brand-300' },
 };
 
 const RECENT_KEY = 'mathmaster-recent-searches';

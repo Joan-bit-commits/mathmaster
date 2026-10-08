@@ -1,327 +1,253 @@
 import { useLocalSearchParams, router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 
-import Avatar from "../../../../src/components/ui/Avatar";
-import Button from "../../../../src/components/ui/Button";
+import ChatComposer from "../../../../src/components/chat/ChatComposer";
+import MessageBubble from "../../../../src/components/chat/MessageBubble";
+import TopicPicker from "../../../../src/components/chat/TopicPicker";
 import KeyboardScreen from "../../../../src/components/ui/KeyboardScreen";
 import MaterialIcon from "../../../../src/components/ui/MaterialIcon";
 import Screen from "../../../../src/components/ui/Screen";
-import LatexText from "../../../../src/components/ui/LatexText";
-import GeoGebraSketch from "../../../../src/components/chat/GeoGebraSketch";
 import { askAIStream, fetchSession } from "../../../../src/services/aiTutor";
 
-function TypingDots() {
-  const dots = [useSharedValue(0), useSharedValue(0), useSharedValue(0)];
-  useEffect(() => {
-    dots.forEach((dot, i) => {
-      dot.value = withRepeat(
-        withTiming(1, { duration: 600, easing: Easing.inOut(Easing.quad) }),
-        -1,
-        true,
-      );
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return (
-    <View
-      className="flex-row items-center gap-1 bg-surface-container-lowest rounded-2xl rounded-tl-sm px-4 py-3 shadow-level-1 self-start"
-      accessibilityLabel="AI is thinking"
-    >
-      {dots.map((dot, i) => (
-        <AnimatedDot key={i} sv={dot} />
-      ))}
-    </View>
-  );
-}
+const FOLLOW_UPS = ["Show an example", "Try a similar one", "Explain it differently"];
+const STARTERS = ["Explain quadratic equations", "Help me solve 2x + 5 = 13", "What is Pythagoras' theorem?"];
 
-function AnimatedDot({ sv }) {
-  const style = useAnimatedStyle(() => ({
-    opacity: 0.3 + 0.7 * sv.value,
-    transform: [{ translateY: -4 * sv.value }],
-  }));
-  return (
-    <Animated.View
-      style={style}
-      className="w-1.5 h-1.5 bg-outline rounded-full"
-    />
-  );
-}
-
-function RefusalBanner() {
-  return (
-    <View className="gap-2">
-      <View className="flex-row items-center gap-2">
-        <View className="w-6 h-6 rounded-md bg-amber-200 items-center justify-center">
-          <Text className="text-amber-800 text-[14px]">🔒</Text>
-        </View>
-        <Text className="text-[14px] font-semibold text-amber-900">MathMaster only answers math</Text>
-      </View>
-      <Text className="text-[13px] text-amber-800 leading-5">I can help with algebra, geometry, trigonometry, calculus, statistics, or any other math topic. Please ask a math question.</Text>
-    </View>
-  );
-}
-
-function ChatMessage({ isUser, content, isRefusal, geogebra }) {
-  return (
-    <View
-      className={`flex-row gap-2 mb-4 max-w-[85%] ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
-    >
-      {!isUser && <Avatar name="AI" size="sm" />}
-      <View
-        className={`rounded-2xl px-4 py-3 ${
-          isUser
-            ? "bg-primary rounded-tr-sm"
-            : "bg-surface-container-lowest shadow-level-1 rounded-tl-sm"
-        }`}
-      >
-        {isUser ? (
-          <LatexText className="text-[16px] leading-6 text-on-primary">{content}</LatexText>
-        ) : isRefusal ? (
-          <RefusalBanner />
-        ) : (
-          <>
-            <LatexText className="text-[16px] leading-6 text-on-surface">{content}</LatexText>
-            {geogebra ? <GeoGebraSketch payload={geogebra} height={380} /> : null}
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
+let messageCounter = 0;
+const nextId = () => `m${++messageCounter}`;
 
 export default function AIChatScreen() {
   const { sessionId: routeSessionId, initial } = useLocalSearchParams();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-  // The two "start a chat" entry points (new-chat composer, "Ask AI tutor"
-  // on a curriculum objective) navigate here with sessionId="new" — there's
-  // no real session yet, so sessionId stays null until the first reply
-  // comes back with one. Tapping a chat-history item instead navigates
-  // with a real numeric id, which we use to load that session's history.
+  const [loadingSession, setLoadingSession] = useState(false);
+  const [topic, setTopic] = useState("General Mathematics");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+  // "new" (from the landing screen or a curriculum objective) has no real session yet; the id arrives with
+  // the first reply. A numeric id comes from chat history and loads that conversation.
   const [sessionId, setSessionId] = useState(() => {
     const parsed = Number(routeSessionId);
     return Number.isFinite(parsed) ? parsed : null;
   });
   const scrollRef = useRef(null);
+  const stickToBottom = useRef(true);
+
+  const updateLast = useCallback((change) => {
+    setMessages((list) => {
+      if (list.length === 0) return list;
+      const last = list[list.length - 1];
+      if (last.isUser) return list;
+      return [...list.slice(0, -1), { ...last, ...change(last) }];
+    });
+  }, []);
+
+  const send = async (text) => {
+    const question = (text ?? input).trim();
+    if (!question || thinking) return;
+    setInput("");
+    stickToBottom.current = true;
+    setMessages((list) => [
+      ...list,
+      { id: nextId(), isUser: true, content: question },
+      { id: nextId(), isUser: false, content: "", isRefusal: false, geogebra: null },
+    ]);
+    setThinking(true);
+    try {
+      await askAIStream(
+        { topic, question, session_id: sessionId ?? undefined },
+        {
+          onToken: (token) => updateLast((last) => ({ content: last.content + token })),
+          onGeoGebra: (geo) => updateLast(() => ({ geogebra: geo })),
+          // Keep the real session id from the first reply so later turns share one server-side conversation.
+          onDone: (info) => {
+            const id = typeof info === "object" && info !== null ? info.sessionId : info;
+            const refusal = typeof info === "object" && info !== null ? Boolean(info.isRefusal) : false;
+            setSessionId(id ?? null);
+            updateLast(() => ({ isRefusal: refusal }));
+          },
+        },
+      );
+    } catch {
+      updateLast(() => ({ content: "Sorry, I couldn't reach the tutor. Please try again.", isRefusal: false }));
+    } finally {
+      setThinking(false);
+    }
+  };
 
   useEffect(() => {
     const parsed = Number(routeSessionId);
     if (Number.isFinite(parsed)) {
-      // Opened from chat history — load the existing conversation instead
-      // of starting blank. (This is the fetch that was missing entirely
-      // before: GET /api/ai-tutor/sessions/<id>/ was wired up on the
-      // backend but nothing on the client ever called it.)
+      // Opened from chat history: load the stored conversation.
+      setLoadingSession(true);
       fetchSession(parsed)
         .then((session) => {
-          const history = (session?.messages || []).map((m) => ({
-            isUser: m.role === "user",
-            content: m.content,
-            isRefusal: Boolean(m.is_refusal),
-            geogebra: m.geogebra ?? null,
-          }));
-          setMessages(history);
+          setMessages(
+            (session?.messages || []).map((m) => ({
+              id: nextId(),
+              isUser: m.role === "user",
+              content: m.content,
+              isRefusal: Boolean(m.is_refusal),
+              geogebra: m.geogebra ?? null,
+            })),
+          );
         })
-        .catch(() => {
-          // Session might belong to someone else, or have been deleted —
-          // fall back to a blank conversation rather than crashing.
-          setMessages([]);
-        });
+        .catch(() => setMessages([])) // deleted or not yours: start blank instead of crashing
+        .finally(() => setLoadingSession(false));
     } else if (initial) {
       send(initial);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages, thinking]);
-
-  const send = async (text) => {
-    const q = (text ?? input).trim();
-    if (!q || thinking) return;
-    setInput("");
-    setMessages((m) => [...m, { isUser: true, content: q }]);
-    setThinking(true);
-    try {
-      setMessages((m) => [...m, { isUser: false, content: "", isRefusal: false, geogebra: null }]);
-      await askAIStream(
-        { topic: "Algebra", question: q, session_id: sessionId ?? undefined },
-        {
-          onToken: (token) =>
-            setMessages((m) => {
-              const copy = [...m];
-              const last = copy[copy.length - 1];
-              if (last && !last.isUser) last.content += token;
-              return [...copy];
-            }),
-          onGeoGebra: (geo) =>
-            setMessages((m) => {
-              const copy = [...m];
-              const last = copy[copy.length - 1];
-              if (last && !last.isUser) last.geogebra = geo;
-              return [...copy];
-            }),
-          // Capture the real session id from the first reply, and keep
-          // reusing it on every later turn so the conversation actually
-          // has continuity server-side instead of starting a fresh
-          // ChatSession on every single message.
-          onDone: (info) => {
-            const id = typeof info === "object" && info !== null ? info.sessionId : info;
-            const isRefusal = typeof info === "object" && info !== null ? Boolean(info.isRefusal) : false;
-            setSessionId(id ?? null);
-            setMessages((m) => {
-              const copy = [...m];
-              const last = copy[copy.length - 1];
-              if (last && !last.isUser) last.isRefusal = isRefusal;
-              return [...copy];
-            });
-          },
-        },
-      );
-    } catch {
-      setMessages((m) => [
-        ...m.slice(0, -1),
-        {
-          isUser: false,
-          content: "Sorry — I could not reach the tutor. Please try again.",
-        },
-      ]);
-    } finally {
-      setThinking(false);
-    }
+  const handleScroll = (e) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distance = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    stickToBottom.current = distance < 80;
+    setShowJump(distance > 160);
   };
 
-  const suggestions = ["Show example", "Try similar", "Explain differently"];
-  const canSend = input.trim().length > 0 && !thinking;
+  const scrollToBottom = (animated = true) => scrollRef.current?.scrollToEnd({ animated });
+
+  const last = messages[messages.length - 1];
+  const showFollowUps = !thinking && last && !last.isUser && last.content && !last.isRefusal;
+  const isEmpty = messages.length === 0 && !loadingSession;
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-background"
-      accessibilityLabel="AI tutor chat"
-    >
+    <SafeAreaView className="flex-1 bg-background" accessibilityLabel="AI tutor chat">
       <Screen>
-        <View className="flex-row items-center justify-between h-16 px-[24px]">
-          <Button
-            variant="icon"
+        <View className="h-14 flex-row items-center justify-between px-3">
+          <Pressable
             onPress={() => router.back()}
+            accessibilityRole="button"
             accessibilityLabel="Go back"
+            className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container"
           >
-            <MaterialIcon
-              name="arrow_back"
-              size={22}
-              color="on-surface-variant"
-            />
-          </Button>
-          <View className="items-center flex-1">
-            <Text className="text-[18px] leading-6 font-semibold text-on-surface">
-              MathMaster AI
-            </Text>
-            <Text className="font-label-sm text-label-sm text-on-surface-variant">
-              Algebra Basics
-            </Text>
+            <MaterialIcon name="arrow_back" size={22} color="on-surface" />
+          </Pressable>
+
+          <Pressable
+            onPress={() => setPickerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Topic: ${topic}. Change topic`}
+            className="max-w-[60%] items-center rounded-full px-3 py-1 active:bg-surface-container"
+          >
+            <Text className="text-[16px] font-semibold text-on-surface">AI Tutor</Text>
+            <View className="flex-row items-center">
+              <Text className="text-[12px] text-on-surface-variant" numberOfLines={1}>{topic}</Text>
+              <MaterialIcon name="expand_more" size={16} color="on-surface-variant" />
+            </View>
+          </Pressable>
+
+          <View className="flex-row">
+            <Pressable
+              onPress={() => router.replace("/(student)/(tabs)/ai-tutor")}
+              accessibilityRole="button"
+              accessibilityLabel="New chat"
+              className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container"
+            >
+              <MaterialIcon name="edit" size={20} color="on-surface-variant" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/(student)/ai-tutor/history")}
+              accessibilityRole="button"
+              accessibilityLabel="Chat history"
+              className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container"
+            >
+              <MaterialIcon name="history" size={22} color="on-surface-variant" />
+            </Pressable>
           </View>
-          <Button
-            variant="icon"
-            onPress={() => router.push("/(student)/ai-tutor/history")}
-            accessibilityLabel="Chat history"
-          >
-            <MaterialIcon name="history" size={20} color="on-surface-variant" />
-          </Button>
         </View>
 
         <KeyboardScreen className="flex-1">
-          <ScrollView
-            ref={scrollRef}
-            contentContainerClassName="px-4 py-4"
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.map((m, i) => (
-              <ChatMessage key={i} isUser={m.isUser} content={m.content} isRefusal={m.isRefusal} geogebra={m.geogebra} />
-            ))}
-            {thinking && !messages[messages.length - 1]?.content ? (
-              <TypingDots />
-            ) : null}
-          </ScrollView>
+          <View className="flex-1">
+            {loadingSession ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator color="#006591" />
+              </View>
+            ) : isEmpty ? (
+              <View className="flex-1 justify-center px-6">
+                <Text className="text-center text-[22px] font-semibold text-on-surface">What are we solving?</Text>
+                <Text className="mb-6 mt-1 text-center text-[14px] text-on-surface-variant">
+                  Ask anything in {topic.toLowerCase()} and I'll walk you through it.
+                </Text>
+                <View className="gap-2">
+                  {STARTERS.map((s) => (
+                    <Pressable
+                      key={s}
+                      onPress={() => send(s)}
+                      accessibilityRole="button"
+                      className="rounded-2xl bg-surface-container-lowest px-4 py-3 shadow-level-1 active:opacity-70"
+                    >
+                      <Text className="text-[15px] text-on-surface">{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <ScrollView
+                ref={scrollRef}
+                onScroll={handleScroll}
+                scrollEventThrottle={32}
+                onContentSizeChange={() => stickToBottom.current && scrollToBottom(false)}
+                keyboardShouldPersistTaps="handled"
+                contentContainerClassName="px-4 pt-3 pb-4"
+                showsVerticalScrollIndicator={false}
+              >
+                {messages.map((m, index) => (
+                  <MessageBubble
+                    key={m.id}
+                    isUser={m.isUser}
+                    content={m.content}
+                    isRefusal={m.isRefusal}
+                    geogebra={m.geogebra}
+                    streaming={thinking && index === messages.length - 1}
+                  />
+                ))}
+              </ScrollView>
+            )}
 
-          {/* Suggestion chips + input bar */}
-          <View className="pb-2">
-            {suggestions.length > 0 && (
+            {showJump ? (
+              <Pressable
+                onPress={() => scrollToBottom(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Scroll to latest message"
+                className="absolute bottom-3 h-10 w-10 items-center justify-center self-center rounded-full bg-surface-container-lowest shadow-level-2"
+              >
+                <MaterialIcon name="keyboard_arrow_down" size={22} color="on-surface" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View className="px-4 pb-3 pt-1">
+            {showFollowUps ? (
               <ScrollView
                 horizontal
+                keyboardShouldPersistTaps="handled"
                 showsHorizontalScrollIndicator={false}
-                contentContainerClassName="gap-2 px-4 pb-3"
+                contentContainerClassName="gap-2 pb-3"
               >
-                {suggestions.map((s) => (
+                {FOLLOW_UPS.map((s) => (
                   <Pressable
                     key={s}
                     onPress={() => send(s)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Suggestion: ${s}`}
-                    className="whitespace-nowrap px-4 py-2 rounded-full bg-surface-container shadow-level-1"
+                    accessibilityLabel={`Ask: ${s}`}
+                    className="rounded-xl bg-surface-container-lowest px-3.5 py-2 shadow-level-1 active:opacity-70"
                   >
-                    <Text className="font-label-sm text-label-sm text-on-surface-variant">
-                      {s}
-                    </Text>
+                    <Text className="text-[13px] font-medium text-on-surface-variant">{s}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
-            )}
-            <View className="px-4">
-              <View className="bg-surface-container-lowest rounded-full flex-row items-center pl-2 pr-1 py-1 shadow-level-1">
-                <Button
-                  variant="icon"
-                  onPress={() => {}}
-                  accessibilityLabel="Add attachment"
-                >
-                  <MaterialIcon name="add_circle" size={24} color="outline" />
-                </Button>
-                <TextInput
-                  className="flex-1 px-2 py-2 text-[16px] leading-6 text-on-surface"
-                  placeholder="Message MathMaster…"
-                  placeholderTextColor="#8b96a3"
-                  value={input}
-                  onChangeText={setInput}
-                  onSubmitEditing={() => send()}
-                  returnKeyType="send"
-                  accessibilityLabel="Message input"
-                />
-                <Pressable
-                  onPress={() => send()}
-                  disabled={!canSend}
-                  accessibilityRole="button"
-                  accessibilityLabel="Send message"
-                  accessibilityState={{ disabled: !canSend }}
-                  className={`w-10 h-10 rounded-full items-center justify-center ml-1 ${
-                    canSend ? "bg-primary" : "bg-surface-variant"
-                  }`}
-                >
-                  <MaterialIcon
-                    name="send"
-                    size={18}
-                    color={canSend ? "on-primary" : "on-surface-variant"}
-                  />
-                </Pressable>
-              </View>
-            </View>
+            ) : null}
+            <ChatComposer value={input} onChangeText={setInput} onSend={() => send()} busy={thinking} />
           </View>
         </KeyboardScreen>
       </Screen>
+
+      <TopicPicker visible={pickerOpen} value={topic} onSelect={setTopic} onClose={() => setPickerOpen(false)} />
     </SafeAreaView>
   );
 }

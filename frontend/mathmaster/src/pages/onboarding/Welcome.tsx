@@ -127,7 +127,7 @@ export default function Onboarding() {
                   </motion.div>
                   <h2 className="mt-6 text-xl font-bold text-ink-900 dark:text-white">All set!</h2>
                   <p className="mt-2 text-sm text-ink-500">Your school is ready. You can now invite members, create classes, and start teaching.</p>
-                  <Button variant="gradient" className="mt-6" onClick={finish}>Go to dashboard <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  <Button variant="primary" className="mt-6" onClick={finish}>Go to dashboard <ArrowRight className="ml-2 h-4 w-4" /></Button>
                 </div>
               </motion.div>
             )}
@@ -136,7 +136,7 @@ export default function Onboarding() {
           {step < 4 && (
             <div className="mt-6 flex items-center justify-between">
               <Button variant="ghost" onClick={back} disabled={step === 0}><ArrowLeft className="h-4 w-4" /> Back</Button>
-              {step < 3 && <Button variant="gradient" onClick={next}>Continue <ArrowRight className="h-4 w-4" /></Button>}
+              {step < 3 && <Button variant="primary" onClick={next}>Continue <ArrowRight className="h-4 w-4" /></Button>}
               {step === 3 && <Button variant="ghost" onClick={next}>Skip for now</Button>}
             </div>
           )}

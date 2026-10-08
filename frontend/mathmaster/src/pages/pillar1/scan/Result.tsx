@@ -104,7 +104,7 @@ export default function ScanResult() {
 
       <Card className="mt-6 flex items-center justify-between p-4">
         <p className="text-sm text-ink-500">Need more help with this problem?</p>
-        <Button variant="gradient" size="sm" onClick={() => navigate('/ai-tutor')}><Sparkles className="h-4 w-4" /> Ask follow-up</Button>
+        <Button variant="primary" size="sm" onClick={() => navigate('/ai-tutor')}><Sparkles className="h-4 w-4" /> Ask follow-up</Button>
       </Card>
     </AppShell>
   );

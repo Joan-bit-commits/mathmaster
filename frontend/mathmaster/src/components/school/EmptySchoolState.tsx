@@ -22,9 +22,9 @@ export function EmptySchoolState() {
         </p>
         <div className="mt-6 flex flex-col gap-3">
           {mayCreate && (
-            <Link to="/onboarding"><Button variant="gradient" className="w-full">Create a new school <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+            <Link to="/onboarding"><Button variant="primary" className="w-full">Create a new school <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
           )}
-          <Link to="/join-school"><Button variant={mayCreate ? 'secondary' : 'gradient'} className="w-full">Join with a class code</Button></Link>
+          <Link to="/join-school"><Button variant={mayCreate ? 'secondary' : 'primary'} className="w-full">Join with a class code</Button></Link>
         </div>
       </Card>
     </div>

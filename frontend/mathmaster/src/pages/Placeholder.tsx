@@ -10,5 +10,5 @@ export function Placeholder({ title }: { title: string }) {
 }
 
 export function NotFound() {
-  return <div className="flex min-h-screen items-center justify-center bg-ink-50 px-6 dark:bg-ink-900"><div className="text-center"><p className="text-8xl font-bold tracking-tighter text-gradient-brand">404</p><h1 className="mt-5 text-2xl font-bold text-ink-900 dark:text-white">Page not found</h1><p className="mt-2 text-sm text-ink-500 dark:text-ink-400">The page you’re looking for doesn’t exist.</p><Link to="/dashboard" className="mt-7 inline-block"><Button variant="gradient"><ArrowLeft className="h-4 w-4" /> Go home</Button></Link></div></div>;
+  return <div className="flex min-h-screen items-center justify-center bg-ink-50 px-6 dark:bg-ink-900"><div className="text-center"><p className="text-8xl font-bold tracking-tighter text-gradient-brand">404</p><h1 className="mt-5 text-2xl font-bold text-ink-900 dark:text-white">Page not found</h1><p className="mt-2 text-sm text-ink-500 dark:text-ink-400">The page you’re looking for doesn’t exist.</p><Link to="/dashboard" className="mt-7 inline-block"><Button variant="primary"><ArrowLeft className="h-4 w-4" /> Go home</Button></Link></div></div>;
 }

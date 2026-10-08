@@ -73,7 +73,7 @@ export default function ScanUpload() {
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => { setPreview(null); setFile(null); }}>Choose another</Button>
-              <Button variant="gradient" onClick={handleSolve} loading={uploading}>
+              <Button variant="primary" onClick={handleSolve} loading={uploading}>
                 <Upload className="h-4 w-4" /> Solve it
               </Button>
             </div>

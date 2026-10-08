@@ -64,7 +64,7 @@ export default function Members() {
           <Input placeholder="Search by name or email..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Button variant="secondary" onClick={() => navigate('/admin/members/bulk-import')}><Upload className="h-4 w-4" /> Bulk import</Button>
-        <Button variant="gradient" onClick={() => navigate('/admin/members/invite')}><UserPlus className="h-4 w-4" /> Invite member</Button>
+        <Button variant="primary" onClick={() => navigate('/admin/members/invite')}><UserPlus className="h-4 w-4" /> Invite member</Button>
       </div>
 
       <div className="mt-4 flex gap-2">

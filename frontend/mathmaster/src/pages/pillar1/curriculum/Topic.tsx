@@ -126,7 +126,7 @@ export default function CurriculumTopic() {
         <TabsContent value="practice">
           <div className="space-y-4">
             <div className="flex gap-3">
-              <Button variant="gradient" onClick={() => navigate('/topics')}><Play className="h-4 w-4" /> Start a quiz</Button>
+              <Button variant="primary" onClick={() => navigate('/topics')}><Play className="h-4 w-4" /> Start a quiz</Button>
               <Button variant="secondary" onClick={() => navigate('/ai-tutor')}><Brain className="h-4 w-4" /> Ask AI tutor</Button>
             </div>
             <div className="space-y-3">

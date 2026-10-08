@@ -91,7 +91,7 @@ export default function StudentProfile() {
             </div>
             <DialogFooter>
               <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-              <Button variant="gradient" onClick={handleSaveProfile}>Save changes</Button>
+              <Button variant="primary" onClick={handleSaveProfile}>Save changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

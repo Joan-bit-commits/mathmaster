@@ -87,7 +87,7 @@ export default function AuthoringQuiz() {
               <Button type="button" variant="ghost" onClick={() => navigate('/teacher/content')}>Cancel</Button>
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" loading={createQuiz.isPending} onClick={handleSubmit((d) => void onSubmit(d, false))}><Save className="h-4 w-4" /> Save</Button>
-                <Button type="button" variant="gradient" loading={createQuiz.isPending} onClick={handleSubmit((d) => void onSubmit(d, true))}><Plus className="h-4 w-4" /> Save & add question</Button>
+                <Button type="button" variant="primary" loading={createQuiz.isPending} onClick={handleSubmit((d) => void onSubmit(d, true))}><Plus className="h-4 w-4" /> Save & add question</Button>
               </div>
             </div>
           </form>

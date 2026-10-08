@@ -103,9 +103,9 @@ export default function QuizDetail() {
         <div className="mt-6 flex items-center justify-between">
           <Button variant="ghost" disabled={current === 0} onClick={() => setCurrent((c) => c - 1)}><ChevronLeft className="h-4 w-4" /> Previous</Button>
           {isLast ? (
-            <Button variant="gradient" loading={submitMutation.isPending} onClick={() => void handleSubmit()}><Send className="h-4 w-4" /> Submit</Button>
+            <Button variant="primary" loading={submitMutation.isPending} onClick={() => void handleSubmit()}><Send className="h-4 w-4" /> Submit</Button>
           ) : (
-            <Button variant="gradient" disabled={!answers[question.id]} onClick={() => setCurrent((c) => c + 1)}>Next <ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="primary" disabled={!answers[question.id]} onClick={() => setCurrent((c) => c + 1)}>Next <ChevronRight className="h-4 w-4" /></Button>
           )}
         </div>
       </div>
