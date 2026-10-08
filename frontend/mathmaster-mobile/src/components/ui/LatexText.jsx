@@ -94,7 +94,12 @@ function buildHtml(content, { fontSize, color }) {
       // rather than showing a blank view.
     }
     postHeight();
-    setTimeout(postHeight, 200); // catch late webfont-driven reflow
+    // Re-measure whenever the content's size changes (KaTeX CSS/fonts arrive late on mobile networks).
+    // A one-off 200ms re-measure left the WebView too short, clipping text and letting whatever sits
+    // below it (e.g. a GeoGebra sketch) sit on top of the missing lines.
+    if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.body);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(postHeight);
+    [200, 600, 1500].forEach(function (t) { setTimeout(postHeight, t); });
   }
   if (document.readyState === 'complete') render();
   else window.addEventListener('load', render);

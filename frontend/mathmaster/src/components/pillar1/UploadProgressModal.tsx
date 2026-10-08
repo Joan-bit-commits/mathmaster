@@ -39,7 +39,7 @@ export function UploadProgressModal({
             <p className="mt-2 truncate text-xs text-ink-500">{fileName}</p>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink-100 dark:bg-ink-700">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500"
+                className="h-full rounded-full bg-brand-600"
                 animate={{ width: `${progress}%` }}
                 transition={{ ease: 'easeOut' }}
               />

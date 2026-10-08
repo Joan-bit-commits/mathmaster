@@ -43,23 +43,20 @@ export function GeoGebraSketch({ payload, height = 420, className }: GeoGebraSke
         preventFocus: true,
         appletOnLoad(api: any) {
           if (cancelled) return;
+          // Each step is isolated: one unsupported call must not turn a loaded applet into "Sketch unavailable".
+          const safe = (fn: () => void) => { try { fn(); } catch (err) { console.warn('GeoGebra config skipped:', err); } };
           try {
             if (payload.view === '2D') {
-              if (payload.axes === false) api.setAxesVisible(false, false);
-              if (payload.grid === false) api.setGridVisible(false);
+              if (payload.axes === false) safe(() => api.setAxesVisible(false, false));
+              if (payload.grid === false) safe(() => api.setGridVisible(false));
               const { x_min, x_max, y_min, y_max } = payload;
               if (typeof x_min === 'number' && typeof x_max === 'number' &&
                   typeof y_min === 'number' && typeof y_max === 'number') {
-                api.setCoordSystem(x_min, x_max, y_min, y_max);
+                safe(() => api.setCoordSystem(x_min, x_max, y_min, y_max));
               }
-              if (payload.x_label) api.setAxisLabel(0, payload.x_label);
-              if (payload.y_label) api.setAxisLabel(1, payload.y_label);
+              if (payload.x_label || payload.y_label) safe(() => api.setAxisLabels(1, payload.x_label || 'x', payload.y_label || 'y'));
             } else if (payload.view === '3D') {
-              api.set3DView(
-                payload.x_label || 'x',
-                payload.y_label || 'y',
-                payload.z_label || 'z',
-              );
+              safe(() => api.setAxisLabels(-1, payload.x_label || 'x', payload.y_label || 'y', payload.z_label || 'z'));
             }
             for (const cmd of payload.commands || []) {
               try { api.evalCommand(cmd); } catch (err) { console.warn('GeoGebra command failed:', cmd, err); }

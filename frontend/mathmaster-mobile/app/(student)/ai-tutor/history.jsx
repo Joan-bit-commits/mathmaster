@@ -40,7 +40,7 @@ export default function AIChatHistoryScreen() {
           <Button variant="icon" onPress={() => router.back()} accessibilityLabel="Go back">
             <MaterialIcon name="arrow_back" size={22} color="on-surface-variant" />
           </Button>
-          <Text accessibilityRole="header" className="text-[22px] leading-8 font-semibold text-on-surface">
+          <Text accessibilityRole="header" className="text-[20px] leading-7 font-semibold text-on-surface">
             Chat history
           </Text>
         </View>
@@ -84,25 +84,31 @@ export default function AIChatHistoryScreen() {
                   onPress={() => router.push(`/(student)/ai-tutor/chat/${item.id}`)}
                   accessibilityRole="button"
                   accessibilityLabel={`Session ${item.title}`}
-                  className="bg-surface-container-lowest rounded-2xl p-4 shadow-level-1 active:opacity-90"
+                  className="rounded-2xl bg-surface-container-lowest px-4 py-3.5 shadow-level-1 active:opacity-80"
                 >
                   <View className="flex-row items-center gap-3">
-                    <View className="w-11 h-11 rounded-full bg-[#c9e6ff] items-center justify-center">
-                      <MaterialIcon name="smart_toy" size={20} color="primary" />
-                    </View>
                     <View className="flex-1">
-                      <Text className="text-[16px] leading-6 font-semibold text-on-surface" numberOfLines={1}>
+                      <Text className="text-[16px] font-semibold leading-6 text-on-surface" numberOfLines={1}>
                         {item.title || item.last_message_preview || 'Math question'}
                       </Text>
-                      <Text className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">
-                        {item.message_count || 0} messages · {friendlyDate(item.updated_at)} · {item.topic || 'Algebra'}
+                      {item.last_message_preview ? (
+                        <Text className="mt-0.5 text-[13px] leading-5 text-on-surface-variant" numberOfLines={1}>
+                          {item.last_message_preview}
+                        </Text>
+                      ) : null}
+                      <Text className="mt-1.5 text-[12px] text-outline">
+                        {item.topic || 'Algebra'} · {item.message_count || 0} messages · {friendlyDate(item.updated_at)}
                       </Text>
-                      {item.last_message_preview ? <Text className="font-body-sm mt-1 text-on-surface-variant" numberOfLines={1}>{item.last_message_preview}</Text> : null}
                     </View>
-                    <Button variant="icon" onPress={() => removeSession(item)} accessibilityLabel={`Delete ${item.title || 'conversation'}`}>
-                      <MaterialIcon name="delete" size={20} color="error" />
-                    </Button>
-                    <MaterialIcon name="chevron_right" size={20} color="on-surface-variant" />
+                    <Pressable
+                      onPress={() => removeSession(item)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${item.title || 'conversation'}`}
+                      className="h-9 w-9 items-center justify-center rounded-full active:bg-surface-container"
+                    >
+                      <MaterialIcon name="delete" size={19} color="outline" />
+                    </Pressable>
                   </View>
                 </Pressable>
               </Animated.View>

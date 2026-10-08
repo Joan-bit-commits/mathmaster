@@ -90,7 +90,7 @@ export default function DocumentsUpload() {
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => { setFile(null); setTitle(''); }}>Choose another</Button>
-              <Button variant="gradient" onClick={handleUpload} loading={uploading}><Upload className="h-4 w-4" /> Upload</Button>
+              <Button variant="primary" onClick={handleUpload} loading={uploading}><Upload className="h-4 w-4" /> Upload</Button>
             </div>
           </div>
         )}

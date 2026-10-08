@@ -113,7 +113,7 @@ export default function PastPaper() {
                   <div><Label>Subject</Label><Select value={subject} onValueChange={setSubject}><SelectTrigger className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Mathematics">Mathematics</SelectItem><SelectItem value="Physics">Physics</SelectItem><SelectItem value="Chemistry">Chemistry</SelectItem></SelectContent></Select></div>
                   <div><Label>Difficulty</Label><Select value={difficulty} onValueChange={setDifficulty}><SelectTrigger className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="easy">Easy</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="hard">Hard</SelectItem></SelectContent></Select></div>
                 </div>
-                <div className="flex justify-end"><Button variant="gradient" onClick={handleGenerate} loading={uploading}><Upload className="h-4 w-4" /> Generate quiz</Button></div>
+                <div className="flex justify-end"><Button variant="primary" onClick={handleGenerate} loading={uploading}><Upload className="h-4 w-4" /> Generate quiz</Button></div>
               </div>
             )}
           </>
@@ -153,7 +153,7 @@ export default function PastPaper() {
             </AnimatePresence>
             <div className="flex items-center gap-3 border-t border-ink-100 pt-4 dark:border-ink-800">
               <div className="flex-1"><Label htmlFor="quiz-title">Quiz title</Label><Input id="quiz-title" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} className="mt-1" /></div>
-              <Button variant="gradient" onClick={handleSaveQuiz} loading={stage === 'saving'} className="mt-6"><Check className="h-4 w-4" /> Save as quiz</Button>
+              <Button variant="primary" onClick={handleSaveQuiz} loading={stage === 'saving'} className="mt-6"><Check className="h-4 w-4" /> Save as quiz</Button>
             </div>
           </div>
         )}

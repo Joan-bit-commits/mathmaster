@@ -42,7 +42,7 @@ export function PlanCard({ plan, current, onChoose, className }: { plan: PlanInf
           {current ? (
             <Button variant="secondary" className="w-full" disabled>Current plan</Button>
           ) : (
-            <Button variant={plan.popular ? 'gradient' : 'secondary'} className="w-full" onClick={onChoose}>
+            <Button variant={plan.popular ? 'primary' : 'secondary'} className="w-full" onClick={onChoose}>
               {plan.id === 'enterprise' ? 'Contact us' : plan.price_monthly === 0 ? 'Downgrade' : 'Upgrade'}
             </Button>
           )}

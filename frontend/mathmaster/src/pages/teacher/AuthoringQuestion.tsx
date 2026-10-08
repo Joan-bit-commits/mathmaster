@@ -162,7 +162,7 @@ export default function AuthoringQuestion() {
             <Button variant="ghost" onClick={() => navigate('/teacher/content')}>Cancel</Button>
             <div className="flex gap-2">
               <Button variant="secondary" loading={createQuestion.isPending} onClick={() => void handleSave(true)}><Plus className="h-4 w-4" /> Save & add another</Button>
-              <Button variant="gradient" loading={createQuestion.isPending} onClick={() => void handleSave(false)}><Check className="h-4 w-4" /> Save & finish</Button>
+              <Button variant="primary" loading={createQuestion.isPending} onClick={() => void handleSave(false)}><Check className="h-4 w-4" /> Save & finish</Button>
             </div>
           </div>
         </Card>
@@ -179,7 +179,7 @@ export default function AuthoringQuestion() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-            <Button variant="gradient" loading={bulkCreate.isPending} onClick={() => void handleImport()}><Upload className="h-4 w-4" /> Import</Button>
+            <Button variant="primary" loading={bulkCreate.isPending} onClick={() => void handleImport()}><Upload className="h-4 w-4" /> Import</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

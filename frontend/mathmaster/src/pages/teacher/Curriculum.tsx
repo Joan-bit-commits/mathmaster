@@ -89,7 +89,7 @@ export default function Curriculum() {
       </div>
 
       <Link to="/teacher/content/topics/new" className="fixed bottom-8 right-8 z-30">
-        <Button variant="gradient" size="lg" className="shadow-hero"><Plus className="h-5 w-5" /> New topic</Button>
+        <Button variant="primary" size="lg" className="shadow-hero"><Plus className="h-5 w-5" /> New topic</Button>
       </Link>
     </AppShell>
   );

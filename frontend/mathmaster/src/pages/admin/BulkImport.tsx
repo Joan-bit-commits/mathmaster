@@ -73,7 +73,7 @@ export default function BulkImport() {
                 <span className="flex items-center gap-2 text-sm font-medium text-ink-700 dark:text-ink-300"><FileSpreadsheet className="h-5 w-5 text-emerald-500" />{file.name}</span>
                 <Button variant="ghost" size="sm" onClick={() => setFile(null)}>Remove</Button>
               </div>
-              <Button variant="gradient" onClick={handleImport} loading={uploading}><Upload className="h-4 w-4" /> Import students</Button>
+              <Button variant="primary" onClick={handleImport} loading={uploading}><Upload className="h-4 w-4" /> Import students</Button>
             </div>
           )}
 

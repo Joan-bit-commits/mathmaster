@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -23,80 +23,85 @@ interface Props {
   height?: number;
 }
 
+// GeoGebra's documented loader. (The old code built ".../apps/deployggb/js/deployggb.js", which does not exist,
+// so the script never loaded and every sketch ended on "unavailable".)
 const GEOGEBRA_SCRIPT_SRC = "https://www.geogebra.org/apps/deployggb.js";
-const LOAD_TIMEOUT_MS = 8000;
+// The applet downloads a few MB on first use, so give slow mobile connections a fair chance.
+const LOAD_TIMEOUT_MS = 20000;
 
-export default function GeoGebraSketch({ payload, height = 380 }: Props) {
-  const webViewRef = useRef<WebView>(null);
+export default function GeoGebraSketch({ payload, height = 340 }: Props) {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "failed">("loading");
+  const [attempt, setAttempt] = useState(0);
   const html = useMemo(() => buildHtml(payload), [payload]);
+  const stateRef = useRef(loadState);
+  stateRef.current = loadState;
 
   useEffect(() => {
+    setLoadState("loading");
     const timer = setTimeout(() => {
-      setLoadState((prev) => (prev === "loading" ? "failed" : prev));
+      if (stateRef.current === "loading") setLoadState("failed");
     }, LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [payload]);
+  }, [payload, attempt]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <MaterialCommunityIcons name="shape" size={16} color="#0EA5E9" />
-          <Text style={styles.title} numberOfLines={1}>
-            {payload.title || (payload.view === "3D" ? "3D Sketch" : "Sketch")}
-          </Text>
-        </View>
-        <View style={[styles.badge, payload.view === "3D" ? styles.badge3d : styles.badge2d]}>
-          <Text style={styles.badgeText}>{payload.view}</Text>
-        </View>
+        <MaterialCommunityIcons name="shape-outline" size={16} color="#006591" />
+        <Text style={styles.title} numberOfLines={1}>
+          {payload.title || (payload.view === "3D" ? "3D sketch" : "Sketch")}
+        </Text>
+        <Text style={styles.badge}>{payload.view}</Text>
       </View>
+
       <View style={[styles.frame, { height }]}>
         <WebView
-          ref={webViewRef}
+          key={attempt}
           originWhitelist={["*"]}
-          source={{ html }}
+          source={{ html, baseUrl: "https://www.geogebra.org" }}
           javaScriptEnabled
           domStorageEnabled
-          allowFileAccess
           mixedContentMode="always"
-          scalesPageToFit
           startInLoadingState
+          nestedScrollEnabled
           renderLoading={() => (
-            <View style={styles.loading}>
-              <ActivityIndicator size="large" color="#0EA5E9" />
-              <Text style={styles.loadingText}>Building {payload.view} workspace…</Text>
+            <View style={styles.overlay}>
+              <ActivityIndicator color="#006591" />
+              <Text style={styles.overlayText}>Building {payload.view} workspace…</Text>
             </View>
           )}
           onMessage={(event) => {
             const data = event.nativeEvent.data;
-            if (data === "ggb-ready") {
-              webViewRef.current?.postMessage(JSON.stringify(payload.commands || []));
-              setLoadState("ready");
-            } else if (data?.startsWith("ggb-error:")) setLoadState("failed");
+            if (data === "ggb-ready") setLoadState("ready");
+            else if (data?.startsWith("ggb-error:")) setLoadState("failed");
           }}
           onError={() => setLoadState("failed")}
+          onHttpError={() => setLoadState("failed")}
         />
         {loadState === "failed" && (
-          <View style={styles.failed}>
-            <MaterialCommunityIcons name="alert-circle" size={32} color="#F43F5E" />
-            <Text style={styles.failedTitle}>Sketch unavailable</Text>
-            <Text style={styles.failedText}>GeoGebra failed to load. Check your internet and try again.</Text>
+          <View style={styles.overlay}>
+            <MaterialCommunityIcons name="wifi-off" size={26} color="#6e7881" />
+            <Text style={styles.failedTitle}>Couldn't load the sketch</Text>
+            <Text style={styles.overlayText}>Check your connection and try again.</Text>
+            <Pressable
+              onPress={() => setAttempt((n) => n + 1)}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading the sketch"
+              style={styles.retry}
+            >
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
           </View>
         )}
       </View>
-      {payload.view === "3D" && (
-        <View style={styles.hintBar}>
-          <Text style={styles.hintText}>💡 Drag to rotate · Scroll to zoom</Text>
-        </View>
-      )}
+
+      {payload.view === "3D" && <Text style={styles.hint}>Drag to rotate · Pinch to zoom</Text>}
     </View>
   );
 }
 
 function buildHtml(payload: GeoGebraPayload): string {
   const appName = payload.view === "3D" ? "3d" : "classic";
-  const ggbBase = "https://www.geogebra.org/apps/deployggb/";
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -107,34 +112,39 @@ function buildHtml(payload: GeoGebraPayload): string {
   #ggb { width: 100vw; height: 100vh; }
 </style>
 <script>
+  function post(message) {
+    if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(message);
+  }
+  // The commands are baked into the page. (Posting them from React Native after load never reached the page
+  // on Android, which delivers WebView messages to \`document\`, not \`window\`.)
+  var COMMANDS = ${JSON.stringify(payload.commands || [])};
+  function safe(fn) { try { fn(); } catch (e) {} }
   var parameters = {
     appName: ${JSON.stringify(appName)},
-    width: window.innerWidth, height: window.innerHeight,
-    showToolBar: true, showAlgebraInput: true, showMenuBar: false,
-    enableRightClick: true, enableLabelDrags: true, preventFocus: true,
-    appletOnLoad: function(api) {
-      try {
-        ${buildConfigJs(payload)}
-        window.addEventListener('message', function(ev) {
-          try {
-            var cmds = JSON.parse(ev.data);
-            if (Array.isArray(cmds)) for (var i = 0; i < cmds.length; i++) try { api.evalCommand(cmds[i]); } catch (e) {}
-          } catch (e) {}
-        });
-        if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage('ggb-ready');
-      } catch (e) {
-        if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage('ggb-error:' + e.message);
-      }
+    showToolBar: false, showAlgebraInput: false, showMenuBar: false,
+    showZoomButtons: true, allowStyleBar: false, showFullscreenButton: false,
+    enableRightClick: false, enableLabelDrags: false, enableShiftDragZoom: true,
+    preventFocus: true, borderColor: null,
+    appletOnLoad: function (api) {
+      // Each step is isolated: one unsupported call must never block the sketch from showing.
+      ${buildConfigJs(payload)}
+      for (var i = 0; i < COMMANDS.length; i++) safe(function () { api.evalCommand(COMMANDS[i]); });
+      post('ggb-ready');
     }
   };
 </script>
-<script src="${ggbBase}js/deployggb.js"></script>
+<script src="${GEOGEBRA_SCRIPT_SRC}" onerror="post('ggb-error:script')"></script>
 </head>
 <body>
   <div id="ggb"></div>
   <script>
-    var applet = new GGBApplet(parameters, true);
-    applet.inject('ggb');
+    if (typeof GGBApplet === 'undefined') {
+      post('ggb-error:script');
+    } else {
+      parameters.width = window.innerWidth;
+      parameters.height = window.innerHeight;
+      new GGBApplet(parameters, true).inject('ggb');
+    }
   </script>
 </body>
 </html>`;
@@ -144,31 +154,42 @@ function buildConfigJs(p: GeoGebraPayload): string {
   if (p.view === "2D") {
     const xmin = p.x_min ?? -5, xmax = p.x_max ?? 5, ymin = p.y_min ?? -5, ymax = p.y_max ?? 5;
     const axes = p.axes !== false, grid = p.grid !== false;
-    return [
-      `api.setCoordSystem(${xmin}, ${xmax}, ${ymin}, ${ymax});`,
-      `api.setAxesVisible(${axes}, ${axes});`,
-      `api.setGridVisible(${grid});`,
-      p.x_label ? `api.setAxisLabel(0, ${JSON.stringify(p.x_label)});` : "",
-      p.y_label ? `api.setAxisLabel(1, ${JSON.stringify(p.y_label)});` : "",
-    ].join("\n");
+    const lines = [
+      `safe(function () { api.setCoordSystem(${xmin}, ${xmax}, ${ymin}, ${ymax}); });`,
+      `safe(function () { api.setAxesVisible(${axes}, ${axes}); });`,
+      `safe(function () { api.setGridVisible(${grid}); });`,
+    ];
+    if (p.x_label || p.y_label) {
+      lines.push(
+        `safe(function () { api.setAxisLabels(1, ${JSON.stringify(p.x_label || "x")}, ${JSON.stringify(p.y_label || "y")}); });`,
+      );
+    }
+    return lines.join("\n      ");
   }
-  return `api.set3DView(${JSON.stringify(p.x_label || "x")}, ${JSON.stringify(p.y_label || "y")}, ${JSON.stringify(p.z_label || "z")});`;
+  return `safe(function () { api.setAxisLabels(-1, ${JSON.stringify(p.x_label || "x")}, ${JSON.stringify(p.y_label || "y")}, ${JSON.stringify(p.z_label || "z")}); });`;
 }
 
+// Same card language as the rest of the app: no outline, soft shadow, 24px radius.
 const styles = StyleSheet.create({
-  container: { marginVertical: 8, borderRadius: 12, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#E2E8F0" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
-  title: { fontSize: 14, fontWeight: "600", color: "#0F172A", flex: 1 },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  badge2d: { backgroundColor: "#0EA5E9" }, badge3d: { backgroundColor: "#A855F7" },
-  badgeText: { fontSize: 10, fontWeight: "700", color: "#fff" },
-  frame: { backgroundColor: "#fff" },
-  loading: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
-  loadingText: { marginTop: 8, color: "#64748B", fontSize: 13 },
-  failed: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "#FEF2F2", padding: 20 },
-  failedTitle: { marginTop: 8, fontSize: 15, fontWeight: "600", color: "#9F1239" },
-  failedText: { marginTop: 4, fontSize: 13, color: "#9F1239", textAlign: "center" },
-  hintBar: { borderTopWidth: 1, borderTopColor: "#E2E8F0", backgroundColor: "#F8FAFC", paddingHorizontal: 12, paddingVertical: 6 },
-  hintText: { fontSize: 11, color: "#64748B", textAlign: "center" },
+  container: {
+    marginVertical: 10,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    shadowColor: "#006591",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 1,
+  },
+  header: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
+  title: { flex: 1, fontSize: 14, fontWeight: "600", color: "#0b1c30" },
+  badge: { fontSize: 11, fontWeight: "700", color: "#3e4850", backgroundColor: "#e5eeff", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: "hidden" },
+  frame: { backgroundColor: "#ffffff" },
+  overlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", backgroundColor: "#eff4ff", padding: 20, gap: 6 },
+  overlayText: { fontSize: 13, color: "#3e4850", textAlign: "center" },
+  failedTitle: { marginTop: 4, fontSize: 15, fontWeight: "600", color: "#0b1c30" },
+  retry: { marginTop: 10, borderRadius: 12, backgroundColor: "#006591", paddingHorizontal: 20, paddingVertical: 9 },
+  retryText: { fontSize: 14, fontWeight: "600", color: "#ffffff" },
+  hint: { fontSize: 11, color: "#6e7881", textAlign: "center", paddingVertical: 8 },
 });

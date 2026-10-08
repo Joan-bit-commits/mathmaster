@@ -23,9 +23,9 @@ export default function ContentHub() {
   const [fabOpen, setFabOpen] = React.useState(false);
 
   const tiles = [
-    { label: 'Topics', count: ov?.topics_count ?? 0, icon: Library, gradient: 'from-brand-500 to-brand-600', href: '/teacher/curriculum' },
-    { label: 'Lessons', count: ov?.lessons_count ?? 0, icon: BookOpen, gradient: 'from-accent-500 to-indigo-600', href: '/teacher/content/lessons/new' },
-    { label: 'Quizzes & Questions', count: ov?.quizzes_count ?? 0, icon: ClipboardCheck, gradient: 'from-amber-500 to-orange-600', href: '/teacher/content/quizzes/new' },
+    { label: 'Topics', count: ov?.topics_count ?? 0, icon: Library, href: '/teacher/curriculum' },
+    { label: 'Lessons', count: ov?.lessons_count ?? 0, icon: BookOpen, href: '/teacher/content/lessons/new' },
+    { label: 'Quizzes & Questions', count: ov?.quizzes_count ?? 0, icon: ClipboardCheck, href: '/teacher/content/quizzes/new' },
   ];
 
   return (
@@ -38,7 +38,7 @@ export default function ContentHub() {
           return (
             <motion.div key={tile.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <Card className="overflow-hidden p-6">
-                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${tile.gradient} text-white shadow-soft`}><Icon className="h-7 w-7" /></div>
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300`}><Icon className="h-6 w-6" /></div>
                 <p className="mt-5 text-3xl font-bold text-ink-900 dark:text-white">{tile.count}</p>
                 <p className="mt-1 text-sm text-ink-500">{tile.label}</p>
                 <Link to={tile.href}><Button variant="secondary" size="sm" className="mt-4">Manage <ArrowRight className="h-3.5 w-3.5" /></Button></Link>
@@ -92,7 +92,7 @@ export default function ContentHub() {
             </motion.div>
           )}
         </AnimatePresence>
-        <Button variant="gradient" size="lg" className="shadow-hero" onClick={() => setFabOpen((o) => !o)}>
+        <Button variant="primary" size="lg" className="shadow-hero" onClick={() => setFabOpen((o) => !o)}>
           {fabOpen ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
           {fabOpen ? '' : ' Quick add'}
         </Button>

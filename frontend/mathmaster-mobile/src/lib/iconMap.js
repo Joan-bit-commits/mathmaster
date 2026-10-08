@@ -113,6 +113,8 @@ const ICON_MAP = {
   flash_on: 'flash-on',
   flash_off: 'flash-off',
   rotate_90_degrees_ccw: 'rotate-90-degrees-ccw',
+  arrow_upward: 'arrow-upward',
+  keyboard_arrow_down: 'keyboard-arrow-down',
 };
 
 export function mapIcon(symbolName) {

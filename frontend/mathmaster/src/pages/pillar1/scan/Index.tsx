@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
+import { ActionTile } from '@/components/ui/action-tile';
 import { motion } from 'framer-motion';
-import { Camera, FileText, Clock3, ArrowRight, Sparkles } from 'lucide-react';
+import { Camera, FileText, Clock3, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -24,21 +25,10 @@ export default function ScanIndex() {
   return (
     <AppShell>
       <PageHeader title="Snap & Solve" description="Snap a photo of any math problem and get a step-by-step solution." />
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        {[
-          { icon: Camera, title: 'Snap a problem', desc: 'Take a photo of any math question', href: '/scan/upload', gradient: 'from-brand-500 to-brand-600' },
-          { icon: FileText, title: 'Upload PDF', desc: 'Upload a worksheet or past paper', href: '/documents/upload', gradient: 'from-accent-500 to-indigo-600' },
-          { icon: Sparkles, title: 'Review my work', desc: 'Go through your recent scans', href: '/scan/result', gradient: 'from-emerald-500 to-teal-600' },
-        ].map((tile, i) => (
-          <Link key={tile.title} to={tile.href}>
-            <motion.div whileHover={{ y: -4 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={`rounded-2xl bg-gradient-to-br ${tile.gradient} p-6 text-white shadow-soft transition-shadow hover:shadow-card`}>
-              <tile.icon className="h-8 w-8" />
-              <p className="mt-5 text-lg font-semibold">{tile.title}</p>
-              <p className="mt-1 text-sm text-white/75">{tile.desc}</p>
-              <ArrowRight className="mt-4 h-5 w-5 text-white/50" />
-            </motion.div>
-          </Link>
-        ))}
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <ActionTile icon={Camera} title="Snap a problem" description="Take a photo of any math question" to="/scan/upload" />
+        <ActionTile icon={FileText} title="Upload PDF" description="A worksheet or past paper" to="/documents/upload" />
+        <ActionTile icon={Sparkles} title="Review my work" description="Go through your recent scans" to="/scan/result" />
       </div>
 
       <div className="mt-8">

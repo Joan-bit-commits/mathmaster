@@ -63,7 +63,7 @@ export default function InviteMember() {
               </Select>
             </div>
           )}
-          <Button variant="gradient" onClick={handleSend} loading={sending} className="w-full"><Send className="h-4 w-4" /> Send invitation</Button>
+          <Button variant="primary" onClick={handleSend} loading={sending} className="w-full"><Send className="h-4 w-4" /> Send invitation</Button>
         </div>
       </Card>
     </AppShell>

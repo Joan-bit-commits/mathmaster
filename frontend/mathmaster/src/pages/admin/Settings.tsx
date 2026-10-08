@@ -64,7 +64,7 @@ export default function AdminSettings() {
           <Button variant="secondary" size="sm" className="mt-4">Generate API key</Button>
         </Card>
 
-        <div className="flex justify-end"><Button variant="gradient" onClick={handleSave}>Save settings</Button></div>
+        <div className="flex justify-end"><Button variant="primary" onClick={handleSave}>Save settings</Button></div>
       </div>
     </AppShell>
   );

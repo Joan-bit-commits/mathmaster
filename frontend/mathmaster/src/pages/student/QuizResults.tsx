@@ -57,17 +57,17 @@ export default function QuizResults() {
     <AppShell>
       <div className="mx-auto max-w-3xl">
         <Breadcrumb items={[{ label: 'Quizzes', href: '/topics' }, { label: attempt.quiz_title, href: `/quizzes/${quizId}` }, { label: 'Results' }]} />
-        <Card className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink-900 to-ink-800 p-8 text-center shadow-hero">
+        <Card className="overflow-hidden rounded-[2rem] bg-ink-900 p-8 text-center">
           <motion.div initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }} className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
             <Sparkles className="h-10 w-10 text-white" />
           </motion.div>
           <p className="mt-6 text-5xl font-bold text-white"><CountUp target={pct} />%</p>
           <Badge tone={tier.tone} className="mt-4 text-sm">{tier.label}</Badge>
-          <p className="mt-4 text-sm text-ink-300">You scored {attempt.score} out of {attempt.total} and earned <span className="font-bold text-yellow-300">{attempt.xp_earned} XP</span></p>
+          <p className="mt-4 text-sm text-ink-300">You scored {attempt.score} out of {attempt.total} and earned <span className="font-bold text-brand-300">{attempt.xp_earned} XP</span></p>
         </Card>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button variant="gradient" onClick={() => navigate(`/quizzes/${quizId}`)}><RotateCcw className="h-4 w-4" /> Try again</Button>
+          <Button variant="primary" onClick={() => navigate(`/quizzes/${quizId}`)}><RotateCcw className="h-4 w-4" /> Try again</Button>
           <Button variant="secondary" onClick={() => {
             const lessonId = quizQuery.data?.lesson_id;
             if (lessonId) navigate(`/lessons/${lessonId}`);

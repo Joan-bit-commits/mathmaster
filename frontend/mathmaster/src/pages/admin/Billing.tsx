@@ -60,7 +60,7 @@ export default function Billing() {
               <div><p className="text-xs text-ink-400">Payment method</p><p className="mt-1 text-sm font-medium text-ink-700 dark:text-ink-300">•••• {subscription.payment_method_last4 ?? '—'}</p></div>
             </div>
             <div className="mt-6 flex gap-3">
-              <Button variant="gradient" onClick={() => navigate('/admin/billing/plans')}>Upgrade plan <ArrowRight className="h-4 w-4" /></Button>
+              <Button variant="primary" onClick={() => navigate('/admin/billing/plans')}>Upgrade plan <ArrowRight className="h-4 w-4" /></Button>
               <Button variant="secondary" onClick={handlePortal}><CreditCard className="h-4 w-4" /> Manage payment</Button>
               <Button variant="ghost" className="text-danger hover:text-danger" onClick={handleCancel}>Cancel subscription</Button>
             </div>

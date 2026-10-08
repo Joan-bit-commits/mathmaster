@@ -16,9 +16,9 @@ export function MarkdownRenderer({ content, className }: { content: string; clas
     blocks.forEach((block, index) => {
       const code = block.querySelector('code')?.textContent ?? block.textContent ?? '';
       const id = `code-${index}`;
-      block.className = 'relative my-5 overflow-x-auto rounded-2xl border border-brand-100 bg-brand-50 p-5 font-mono text-sm leading-6 text-brand-900 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-100';
+      block.className = 'relative my-4 overflow-x-auto rounded-xl border border-ink-200 bg-ink-50 p-4 pr-12 font-mono text-sm leading-6 text-ink-800 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-100';
       const button = document.createElement('button');
-      button.className = 'absolute right-3 top-3 rounded-lg bg-white/80 p-2 text-brand-600 shadow-sm hover:bg-white dark:bg-ink-800/80 dark:text-brand-300';
+      button.className = 'absolute right-2 top-2 rounded-lg border border-ink-200 bg-white px-2 py-1 text-xs text-ink-500 hover:text-ink-900 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-300';
       button.setAttribute('aria-label', 'Copy code');
       button.innerHTML = copied === id ? '✓' : '⧉';
       button.onclick = () => { void copyCode(code, id); };

@@ -1,6 +1,6 @@
 import * as React from 'react';
+import { ActionTile } from '@/components/ui/action-tile';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Users, GraduationCap, Sparkles, Brain, UserPlus, Upload, BookOpen, CreditCard, ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
@@ -58,11 +58,11 @@ export default function AdminDashboard() {
   return (
     <AppShell>
       {/* Welcome banner */}
-      <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-lg sm:p-8">
+      <div className="overflow-hidden rounded-[2rem] bg-ink-900 p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{school.name}</p>
-            <p className="mt-1.5 text-sm text-slate-300">{school.address}</p>
+            <p className="mt-1.5 text-sm text-ink-300">{school.address}</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge tone={statusTone[school.status] ?? 'neutral'}>{school.status}</Badge>
@@ -80,21 +80,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { icon: UserPlus, label: 'Invite Teachers', desc: 'Send email invitations', href: '/admin/members/invite', gradient: 'from-brand-500 to-brand-600' },
-          { icon: Upload, label: 'Import Students', desc: 'Bulk CSV upload', href: '/admin/members/bulk-import', gradient: 'from-emerald-500 to-teal-600' },
-          { icon: BookOpen, label: 'Manage Classes', desc: 'Create and assign', href: '/admin/classes', gradient: 'from-accent-500 to-indigo-600' },
-          { icon: CreditCard, label: 'View Billing', desc: 'Plan and invoices', href: '/admin/billing', gradient: 'from-amber-500 to-orange-600' },
-        ].map((tile, i) => (
-          <Link key={tile.label} to={tile.href}>
-            <motion.div whileHover={{ y: -4 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={`rounded-2xl bg-gradient-to-br ${tile.gradient} p-5 text-white shadow-soft transition-shadow hover:shadow-card`}>
-              <tile.icon className="h-7 w-7" />
-              <p className="mt-4 text-sm font-semibold">{tile.label}</p>
-              <p className="mt-1 text-xs text-white/75">{tile.desc}</p>
-            </motion.div>
-          </Link>
-        ))}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ActionTile icon={UserPlus} title="Invite teachers" description="Send email invitations" to="/admin/members/invite" />
+        <ActionTile icon={Upload} title="Import students" description="Bulk CSV upload" to="/admin/members/bulk-import" />
+        <ActionTile icon={BookOpen} title="Manage classes" description="Create and assign" to="/admin/classes" />
+        <ActionTile icon={CreditCard} title="View billing" description="Plan and invoices" to="/admin/billing" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">

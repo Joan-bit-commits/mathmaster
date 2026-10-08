@@ -49,7 +49,7 @@ export default function LessonDetail() {
       <Card className="mt-6 p-6 sm:p-8">
         <MarkdownRenderer content={lesson.content} />
         <div className="mt-8 border-t border-ink-200 pt-6 dark:border-ink-700">
-          <Button variant={completed ? 'secondary' : 'gradient'} onClick={markComplete} disabled={completed}>
+          <Button variant={completed ? 'secondary' : 'primary'} onClick={markComplete} disabled={completed}>
             {completed ? <><Check className="h-4 w-4" /> Completed</> : 'Mark as complete'}
           </Button>
         </div>
@@ -63,7 +63,7 @@ export default function LessonDetail() {
           <Link to={`/lessons/${lesson.id}/quizzes`}>
             <Button variant="secondary"><ClipboardCheck className="h-4 w-4" /> Take quiz</Button>
           </Link>
-          <Button variant="gradient" disabled={!nextLesson} onClick={() => nextLesson && navigate(`/lessons/${nextLesson.id}`)}>
+          <Button variant="primary" disabled={!nextLesson} onClick={() => nextLesson && navigate(`/lessons/${nextLesson.id}`)}>
             Next <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

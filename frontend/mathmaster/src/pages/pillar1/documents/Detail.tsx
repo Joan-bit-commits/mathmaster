@@ -149,7 +149,7 @@ export default function DocumentDetail() {
             <div ref={scrollRef} className="max-h-[calc(100vh-360px)] min-h-[200px] space-y-3 overflow-y-auto scrollbar-thin">
               {messages.map((msg) => (
                 <div key={msg.id} className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  {msg.role === 'assistant' && <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-bold text-white">M</div>}
+                  {msg.role === 'assistant' && <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">M</div>}
                   <div className={cn('max-w-2xl', msg.role === 'user' ? 'rounded-2xl rounded-br-md bg-brand-500 px-4 py-2.5 text-sm text-white' : 'rounded-2xl rounded-bl-md border border-ink-200 bg-white px-4 py-2.5 dark:border-ink-700 dark:bg-ink-800')}>
                     {msg.role === 'user' ? <p className="text-sm">{msg.content}</p> : msg.content === '' ? <ThinkingDots /> : <div><MarkdownRenderer content={msg.content} className="prose-sm" />{msg.citations && msg.citations.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{msg.citations.map((c, i) => <CitationChip key={i} citation={c} onOpen={(page) => { setReadPage(page || 1); setMode('read'); }} />)}</div>}</div>}
                   </div>

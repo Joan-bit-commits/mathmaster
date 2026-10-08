@@ -85,7 +85,7 @@ function Logo({ collapsed = false }: { collapsed?: boolean }) {
   const home = user?.role === 'teacher' ? '/teacher' : '/dashboard';
   return (
     <Link to={home} className={cn('flex items-center gap-2.5', collapsed && 'justify-center')} aria-label="MathMaster home">
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg font-bold text-white shadow-glow-brand">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
         M
         <span className="absolute -right-1 -top-1 text-[10px] font-bold text-brand-600">π</span>
       </div>

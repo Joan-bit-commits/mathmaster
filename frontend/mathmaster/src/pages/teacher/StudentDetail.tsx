@@ -110,7 +110,7 @@ export default function StudentDetail() {
         </div>
 
         {/* Recommendations */}
-        <Card className="mt-6 bg-indigo-50 p-5 dark:bg-indigo-900/10">
+        <Card className="mt-6 bg-brand-50 p-5 dark:bg-brand-900/10">
           <h3 className="text-sm font-semibold text-ink-900 dark:text-ink-100">Recommendations</h3>
           <div className="mt-3 space-y-2">
             {s.recommendations.map((r) => (

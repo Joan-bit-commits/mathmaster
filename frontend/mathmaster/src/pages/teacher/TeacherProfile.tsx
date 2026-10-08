@@ -86,7 +86,7 @@ export default function TeacherProfile() {
             </div>
             <DialogFooter>
               <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-              <Button variant="gradient" onClick={() => { toast.success('Profile updated'); setEditOpen(false); }}>Save changes</Button>
+              <Button variant="primary" onClick={() => { toast.success('Profile updated'); setEditOpen(false); }}>Save changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

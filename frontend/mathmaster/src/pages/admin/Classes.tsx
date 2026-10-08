@@ -55,7 +55,7 @@ export default function Classes() {
     <AppShell>
       <PageHeader title="Classes" description="Create and manage classes in your school." />
       <div className="mt-6 flex justify-end">
-        <Button variant="gradient" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4" /> New class</Button>
+        <Button variant="primary" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4" /> New class</Button>
       </div>
 
       {showForm && (
@@ -71,7 +71,7 @@ export default function Classes() {
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <Button variant="gradient" onClick={handleCreate} loading={creating}>Create class</Button>
+            <Button variant="primary" onClick={handleCreate} loading={creating}>Create class</Button>
             <Button variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
           </div>
         </Card>

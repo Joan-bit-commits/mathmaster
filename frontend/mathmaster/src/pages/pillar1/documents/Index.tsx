@@ -50,7 +50,7 @@ export default function DocumentsIndex() {
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-ink-400" />
           <Input placeholder="Search documents..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Button variant="gradient" onClick={() => navigate('/documents/upload')}><Upload className="h-4 w-4" /> Upload document</Button>
+        <Button variant="primary" onClick={() => navigate('/documents/upload')}><Upload className="h-4 w-4" /> Upload document</Button>
       </div>
 
       <div className="mt-4 flex gap-2">
@@ -68,7 +68,7 @@ export default function DocumentsIndex() {
           <FileText className="mx-auto h-12 w-12 text-ink-300" />
           <p className="mt-4 text-sm font-medium text-ink-600 dark:text-ink-300">No documents yet</p>
           <p className="mt-1 text-xs text-ink-400">Upload a textbook, past paper, or notes to get started.</p>
-          <Button variant="gradient" className="mt-6" onClick={() => navigate('/documents/upload')}><Upload className="h-4 w-4" /> Upload your first document</Button>
+          <Button variant="primary" className="mt-6" onClick={() => navigate('/documents/upload')}><Upload className="h-4 w-4" /> Upload your first document</Button>
         </Card>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

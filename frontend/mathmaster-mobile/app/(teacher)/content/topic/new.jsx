@@ -72,7 +72,7 @@ export default function CreateTopicScreen() {
       <View className="absolute bottom-0 left-0 right-0 px-[24px] pb-4 pt-3 bg-background/95 border-t border-surface-container/50 flex-row gap-3">
         <Button variant="secondary" label="Cancel" onPress={() => router.back()} accessibilityLabel="Cancel" />
         <Button label="Save" loading={saving} onPress={() => save(false)} accessibilityLabel="Save topic" />
-        <Button variant="gradient" label="Save & add lesson" onPress={() => save(true)} accessibilityLabel="Save and add lesson" />
+        <Button variant="primary" label="Save & add lesson" onPress={() => save(true)} accessibilityLabel="Save and add lesson" />
       </View>
     </SafeAreaView>
   );

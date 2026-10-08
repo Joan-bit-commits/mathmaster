@@ -101,7 +101,7 @@ export default function SchoolProfile() {
       </div>
 
       <div className="mt-6 flex justify-end">
-        <Button variant="gradient" onClick={handleSave} loading={saving}>Save changes</Button>
+        <Button variant="primary" onClick={handleSave} loading={saving}>Save changes</Button>
       </div>
     </AppShell>
   );

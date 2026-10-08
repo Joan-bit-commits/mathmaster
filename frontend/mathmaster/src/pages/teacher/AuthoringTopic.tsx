@@ -80,7 +80,7 @@ export default function AuthoringTopic() {
               <Button type="button" variant="ghost" onClick={() => navigate('/teacher/content')}>Cancel</Button>
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" loading={createTopic.isPending} onClick={handleSubmit((d) => void onSubmit(d, false))}><Save className="h-4 w-4" /> Save</Button>
-                <Button type="button" variant="gradient" loading={createTopic.isPending} onClick={handleSubmit((d) => void onSubmit(d, true))}><Plus className="h-4 w-4" /> Save & add lesson</Button>
+                <Button type="button" variant="primary" loading={createTopic.isPending} onClick={handleSubmit((d) => void onSubmit(d, true))}><Plus className="h-4 w-4" /> Save & add lesson</Button>
               </div>
             </div>
           </form>

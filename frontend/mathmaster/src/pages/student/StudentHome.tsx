@@ -1,7 +1,6 @@
 import { useMemo, type ElementType } from "react";
 import { ArrowRight, BookCheck, Building2, Camera, ClipboardCheck, Flame, FileText, LockKeyhole, Sparkles, Target } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
 import { useSchoolStore } from "@/stores/schoolStore";
 import { useRecommendations, usePerformance } from "@/hooks/useAnalytics";
@@ -10,6 +9,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ActionTile } from "@/components/ui/action-tile";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/ui/page-header";
 import { TopicCard } from "@/components/shared/TopicCard";
@@ -79,16 +79,16 @@ export default function StudentHome() {
   }, [topics]);
 
   const stats: [ElementType, string, string, string, string][] = [
-    [Flame, "Streak", statsReady ? plural(streak, "day") : dash, "Current", "text-orange-300"],
-    [BookCheck, "Lessons", statsReady ? String(summary!.lessons_completed) : dash, "Completed · 30 days", "text-emerald-300"],
-    [ClipboardCheck, "Quizzes", statsReady ? String(summary!.quizzes_taken) : dash, "Taken · 30 days", "text-sky-300"],
-    [Target, "Avg score", statsReady && summary!.avg_score != null ? `${Math.round(summary!.avg_score)}%` : dash, "Last 30 days", "text-yellow-300"],
+    [Flame, "Streak", statsReady ? plural(streak, "day") : dash, "Current", "text-brand-300"],
+    [BookCheck, "Lessons", statsReady ? String(summary!.lessons_completed) : dash, "Completed · 30 days", "text-brand-300"],
+    [ClipboardCheck, "Quizzes", statsReady ? String(summary!.quizzes_taken) : dash, "Taken · 30 days", "text-brand-300"],
+    [Target, "Avg score", statsReady && summary!.avg_score != null ? `${Math.round(summary!.avg_score)}%` : dash, "Last 30 days", "text-brand-300"],
   ];
 
   return (
     <AppShell>
       <PageHeader title="Your learning space" description="Small steps today lead to big breakthroughs." />
-      <div className="mt-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink-900 to-ink-800 p-6 shadow-hero sm:p-8">
+      <div className="mt-6 overflow-hidden rounded-[2rem] bg-ink-900 p-6 sm:p-8">
         <div className="flex flex-col justify-between gap-8 md:flex-row md:items-start">
           <div className="min-w-0">
             {school && (
@@ -137,7 +137,7 @@ export default function StudentHome() {
       {next && (
         <Link to={`/topics/${next.topic.id}`} className="mt-6 block">
           <Card hover className="flex cursor-pointer flex-col items-center gap-5 p-5 sm:flex-row sm:p-6">
-            <div className="flex h-24 w-full shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-accent-600 text-white sm:h-28 sm:w-48">
+            <div className="flex h-24 w-full shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200 sm:h-28 sm:w-48">
               <span className="px-3 text-center font-serif text-2xl font-semibold opacity-90 line-clamp-2">{next.topic.subject}</span>
             </div>
             <div className="min-w-0 flex-1">
@@ -158,25 +158,10 @@ export default function StudentHome() {
         </Link>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {(
-          [
-            [Sparkles, "Ask AI Tutor", "Get unstuck step by step", "from-brand-500 to-brand-600", "/ai-tutor"],
-            [Camera, "Snap & Solve", "Photo a problem for solution", "from-emerald-500 to-teal-600", "/scan"],
-            [FileText, "My Documents", "Upload & ask questions", "from-accent-500 to-indigo-600", "/documents"],
-          ] as [ElementType, string, string, string, string][]
-        ).map(([Icon, title, desc, gradient, href]) => (
-          <Link key={title} to={href}>
-            <motion.div
-              whileHover={{ y: -4 }}
-              className={`rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-soft transition-shadow hover:shadow-card`}
-            >
-              <Icon className="h-7 w-7" />
-              <p className="mt-5 text-base font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-white/75">{desc}</p>
-            </motion.div>
-          </Link>
-        ))}
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <ActionTile icon={Sparkles} title="Ask AI Tutor" description="Get unstuck step by step" to="/ai-tutor" />
+        <ActionTile icon={Camera} title="Snap & Solve" description="Photo a problem for a solution" to="/scan" />
+        <ActionTile icon={FileText} title="My Documents" description="Upload and ask questions" to="/documents" />
       </div>
 
       <Section title="Your topics" action={{ label: "See all", href: "/topics" }}>
